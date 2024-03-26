@@ -12,10 +12,10 @@ import Statistics
 
 include("protocol_constants.jl")
 include("types.jl")
+include("miscellaneous.jl")
 include("serialization.jl")
 include("encryption.jl")
-include("servers.jl")
 include("simulation.jl")
-include("miscellaneous.jl")
+include("servers.jl")
 
 end # module
