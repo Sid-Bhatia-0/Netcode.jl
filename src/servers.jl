@@ -117,7 +117,7 @@ function start_client(auth_server_address, username, password)
     return nothing
 end
 
-function auth_handler(request, df_user_data)
+function auth_handler(request, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, app_server_addresses)
     i = findfirst(x -> x.first == "Authorization", request.headers)
 
     if isnothing(i)
@@ -134,7 +134,7 @@ function auth_handler(request, df_user_data)
                 return HTTP.Response(400, "ERROR: Invalid credentials")
             else
                 if bytes2hex(SHA.sha3_256(hashed_password * df_user_data[i, :salt])) == df_user_data[i, :hashed_salted_hashed_password]
-                    connect_token_info = ConnectTokenInfo(i)
+                    connect_token_info = ConnectTokenInfo(protocol_id, timeout_seconds, connect_token_expire_seconds, app_server_addresses, i)
 
                     pprint(connect_token_info)
 
@@ -153,4 +153,4 @@ function auth_handler(request, df_user_data)
     end
 end
 
-start_auth_server(auth_server_address, df_user_data) = HTTP.serve(request -> auth_handler(request, df_user_data), auth_server_address.host, auth_server_address.port)
+start_auth_server(auth_server_address, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, app_server_addresses) = HTTP.serve(request -> auth_handler(request, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, app_server_addresses), auth_server_address.host, auth_server_address.port)

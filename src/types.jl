@@ -126,19 +126,19 @@ function get_inetaddr(netcode_address::NetcodeAddress)
     return Sockets.InetAddr(host, netcode_address.port)
 end
 
-function ConnectTokenInfo(client_id)
+function ConnectTokenInfo(protocol_id, timeout_seconds, connect_token_expire_seconds, app_server_addresses, client_id)
     create_timestamp = time_ns()
-    expire_timestamp = create_timestamp + CONNECT_TOKEN_EXPIRE_SECONDS * 10 ^ 9
+    expire_timestamp = create_timestamp + connect_token_expire_seconds * 10 ^ 9
 
     return ConnectTokenInfo(
         NETCODE_VERSION_INFO,
-        PROTOCOL_ID,
+        protocol_id,
         create_timestamp,
         expire_timestamp,
         rand(UInt8, SIZE_OF_NONCE),
-        TIMEOUT_SECONDS,
+        timeout_seconds,
         client_id,
-        NetcodeAddress.(APP_SERVER_ADDRESSES),
+        NetcodeAddress.(app_server_addresses),
         rand(UInt8, SIZE_OF_KEY),
         rand(UInt8, SIZE_OF_KEY),
         rand(UInt8, SIZE_OF_USER_DATA),

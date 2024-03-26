@@ -9,7 +9,7 @@ if length(ARGS) == 1
     elseif ARGS[1] == "--auth_server"
         @info "Running as auth_server" Netcode.APP_SERVER_ADDRESS Netcode.AUTH_SERVER_ADDRESS
 
-        Netcode.start_auth_server(Netcode.AUTH_SERVER_ADDRESS, Netcode.USER_DATA)
+        Netcode.start_auth_server(Netcode.AUTH_SERVER_ADDRESS, Netcode.USER_DATA, Netcode.PROTOCOL_ID, Netcode.TIMEOUT_SECONDS, Netcode.CONNECT_TOKEN_EXPIRE_SECONDS, Netcode.APP_SERVER_ADDRESSES)
 
     elseif ARGS[1] == "--client"
         @info "Running as client" Netcode.APP_SERVER_ADDRESS Netcode.AUTH_SERVER_ADDRESS
