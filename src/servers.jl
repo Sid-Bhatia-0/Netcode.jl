@@ -1,4 +1,4 @@
-function start_app_server(app_server_address, room_size, used_connect_token_history_size, key)
+function start_app_server(app_server_address, room_size, used_connect_token_history_size, key, protocol_id)
     room = fill(NULL_CLIENT_SLOT, room_size)
 
     used_connect_token_history = fill(NULL_CONNECT_TOKEN_SLOT, used_connect_token_history_size)
@@ -26,7 +26,7 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
 
             io = IOBuffer(data)
 
-            connection_request_packet = try_read(io, ConnectionRequestPacket)
+            connection_request_packet = try_read(io, ConnectionRequestPacket, protocol_id)
             if isnothing(connection_request_packet)
                 @info "Invalid connection request packet received"
                 continue
@@ -88,7 +88,7 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
     return nothing
 end
 
-function start_client(auth_server_address, username, password)
+function start_client(auth_server_address, username, password, protocol_id)
     hashed_password = bytes2hex(SHA.sha3_256(password))
 
     response = HTTP.get("http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port))
@@ -97,7 +97,7 @@ function start_client(auth_server_address, username, password)
         error("Invalid connect token packet received")
     end
 
-    connect_token_packet = try_read(IOBuffer(response.body), ConnectTokenPacket)
+    connect_token_packet = try_read(IOBuffer(response.body), ConnectTokenPacket, protocol_id)
     if isnothing(connect_token_packet)
         error("Invalid connect token packet received")
     end
@@ -117,7 +117,7 @@ function start_client(auth_server_address, username, password)
     return nothing
 end
 
-function auth_handler(request, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, app_server_addresses)
+function auth_handler(request, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses)
     i = findfirst(x -> x.first == "Authorization", request.headers)
 
     if isnothing(i)
@@ -134,7 +134,7 @@ function auth_handler(request, df_user_data, protocol_id, timeout_seconds, conne
                 return HTTP.Response(400, "ERROR: Invalid credentials")
             else
                 if bytes2hex(SHA.sha3_256(hashed_password * df_user_data[i, :salt])) == df_user_data[i, :hashed_salted_hashed_password]
-                    connect_token_info = ConnectTokenInfo(protocol_id, timeout_seconds, connect_token_expire_seconds, app_server_addresses, i)
+                    connect_token_info = ConnectTokenInfo(protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses, i)
 
                     pprint(connect_token_info)
 
@@ -153,4 +153,4 @@ function auth_handler(request, df_user_data, protocol_id, timeout_seconds, conne
     end
 end
 
-start_auth_server(auth_server_address, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, app_server_addresses) = HTTP.serve(request -> auth_handler(request, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, app_server_addresses), auth_server_address.host, auth_server_address.port)
+start_auth_server(auth_server_address, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses) = HTTP.serve(request -> auth_handler(request, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses), auth_server_address.host, auth_server_address.port)

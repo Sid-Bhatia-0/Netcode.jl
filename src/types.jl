@@ -45,6 +45,7 @@ struct ConnectTokenInfo
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
     user_data::Vector{UInt8}
+    server_side_shared_key::Vector{UInt8}
 end
 
 struct PrivateConnectToken
@@ -126,7 +127,8 @@ function get_inetaddr(netcode_address::NetcodeAddress)
     return Sockets.InetAddr(host, netcode_address.port)
 end
 
-function ConnectTokenInfo(protocol_id, timeout_seconds, connect_token_expire_seconds, app_server_addresses, client_id)
+function ConnectTokenInfo(protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses, client_id)
+    # TODO: assert conditions on inputs
     create_timestamp = time_ns()
     expire_timestamp = create_timestamp + connect_token_expire_seconds * 10 ^ 9
 
@@ -142,6 +144,7 @@ function ConnectTokenInfo(protocol_id, timeout_seconds, connect_token_expire_sec
         rand(UInt8, SIZE_OF_KEY),
         rand(UInt8, SIZE_OF_KEY),
         rand(UInt8, SIZE_OF_USER_DATA),
+        server_side_shared_key,
     )
 end
 
@@ -227,7 +230,7 @@ function ConnectTokenPacket(connect_token_info::ConnectTokenInfo)
 
     associated_data = get_serialized_data(PrivateConnectTokenAssociatedData(connect_token_info))
 
-    encrypted_private_connect_token_data = encrypt(message, associated_data, connect_token_info.nonce, SERVER_SIDE_SHARED_KEY)
+    encrypted_private_connect_token_data = encrypt(message, associated_data, connect_token_info.nonce, connect_token_info.server_side_shared_key)
 
     return ConnectTokenPacket(
         connect_token_info.netcode_version_info,
