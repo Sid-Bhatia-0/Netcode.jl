@@ -139,7 +139,7 @@ function try_add!(room::Vector{ClientSlot}, client_slot::ClientSlot)
     return false
 end
 
-function start_app_server(app_server_address, room_size, used_connect_token_history_size)
+function start_app_server(app_server_address, room_size, used_connect_token_history_size, key)
     room = fill(NULL_CLIENT_SLOT, room_size)
 
     used_connect_token_history = fill(NULL_CONNECT_TOKEN_SLOT, used_connect_token_history_size)
@@ -175,7 +175,7 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
 
             pprint(connection_request_packet)
 
-            private_connect_token = try_decrypt(connection_request_packet, SERVER_SIDE_SHARED_KEY)
+            private_connect_token = try_decrypt(connection_request_packet, key)
             if isnothing(private_connect_token)
                 @info "Invalid connection request packet received"
                 continue
