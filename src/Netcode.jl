@@ -14,10 +14,6 @@ include("protocol_constants.jl")
 include("types.jl")
 include("serialization.jl")
 
-const NULL_NETCODE_ADDRESS = NetcodeAddress(0, 0, 0, 0)
-
-const NULL_CLIENT_SLOT = ClientSlot(false, NULL_NETCODE_ADDRESS, 0)
-
 const PROTOCOL_ID = parse(TYPE_OF_PROTOCOL_ID, bytes2hex(SHA.sha3_256(cat(NETCODE_VERSION_INFO, Vector{UInt8}("Netcode.jl"), dims = 1)))[1:16], base = 16)
 
 const RNG = Random.MersenneTwister(0)
@@ -37,8 +33,6 @@ const APP_SERVER_ADDRESSES = [Sockets.InetAddr(Sockets.localhost, 10001)]
 const APP_SERVER_ADDRESS = APP_SERVER_ADDRESSES[1]
 
 const USED_CONNECT_TOKEN_HISTORY_SIZE = ROOM_SIZE
-
-const NULL_CONNECT_TOKEN_SLOT = ConnectTokenSlot(0, UInt8[], NULL_NETCODE_ADDRESS)
 
 @assert 1 <= length(APP_SERVER_ADDRESSES) <= MAX_NUM_SERVER_ADDRESSES
 

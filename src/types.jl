@@ -23,11 +23,15 @@ struct NetcodeAddress
     port::TYPE_OF_PORT
 end
 
+const NULL_NETCODE_ADDRESS = NetcodeAddress(0, 0, 0, 0)
+
 struct ClientSlot
     is_used::Bool
     netcode_address::NetcodeAddress
     client_id::TYPE_OF_CLIENT_ID
 end
+
+const NULL_CLIENT_SLOT = ClientSlot(false, NULL_NETCODE_ADDRESS, 0)
 
 struct ConnectTokenInfo
     netcode_version_info::Vector{UInt8}
@@ -64,6 +68,8 @@ struct ConnectTokenSlot
     hmac::Vector{UInt8} # TODO(perf): can store hash of hmac instead of hmac
     netcode_address::NetcodeAddress
 end
+
+const NULL_CONNECT_TOKEN_SLOT = ConnectTokenSlot(0, UInt8[], NULL_NETCODE_ADDRESS)
 
 abstract type AbstractPacket end
 
