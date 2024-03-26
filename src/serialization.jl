@@ -132,14 +132,14 @@ function try_read(io::IO, ::Type{NetcodeAddress})
     return NetcodeAddress(address_type, host_ipv4, host_ipv6, port)
 end
 
-function try_read(io::IO, ::Type{ConnectTokenPacket})
+function try_read(io::IO, ::Type{ConnectTokenPacket}, expected_protocol_id)
     netcode_version_info = read(io, SIZE_OF_NETCODE_VERSION_INFO)
     if netcode_version_info != NETCODE_VERSION_INFO
         return nothing
     end
 
     protocol_id = read(io, TYPE_OF_PROTOCOL_ID)
-    if protocol_id != PROTOCOL_ID
+    if protocol_id != expected_protocol_id
         return nothing
     end
 
@@ -197,7 +197,7 @@ function try_read(io::IO, ::Type{ConnectTokenPacket})
     )
 end
 
-function try_read(io::IO, ::Type{ConnectionRequestPacket})
+function try_read(io::IO, ::Type{ConnectionRequestPacket}, expected_protocol_id)
     packet_type = read(io, TYPE_OF_PACKET_TYPE)
     if packet_type != PACKET_TYPE_CONNECTION_REQUEST_PACKET
         return nothing
@@ -209,7 +209,7 @@ function try_read(io::IO, ::Type{ConnectionRequestPacket})
     end
 
     protocol_id = read(io, TYPE_OF_PROTOCOL_ID)
-    if protocol_id != PROTOCOL_ID
+    if protocol_id != expected_protocol_id
         return nothing
     end
 
