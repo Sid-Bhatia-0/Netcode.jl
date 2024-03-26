@@ -13,6 +13,7 @@ import Statistics
 include("protocol_constants.jl")
 include("types.jl")
 include("serialization.jl")
+include("encryption.jl")
 include("servers.jl")
 include("simulation.jl")
 include("miscellaneous.jl")
