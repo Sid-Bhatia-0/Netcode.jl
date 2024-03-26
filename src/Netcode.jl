@@ -85,17 +85,6 @@ function sleep_to_achieve_target_frame_rate!(game_state, debug_info)
     return nothing
 end
 
-function create_df_debug_info(debug_info)
-    return DF.DataFrame(
-        # :frame_end_time_buffer => debug_info.frame_end_time_buffer,
-        :frame_time => debug_info.frame_time_buffer,
-        :update_time_theoretical => debug_info.update_time_theoretical_buffer,
-        :update_time_observed => debug_info.update_time_observed_buffer,
-        :sleep_time_theoretical => debug_info.sleep_time_theoretical_buffer,
-        :sleep_time_observed => debug_info.sleep_time_observed_buffer,
-    )
-end
-
 function is_client_already_connected(room, client_netcode_address, client_id)
     for client_slot in room
         if client_slot.is_used
