@@ -1,5 +1,3 @@
-import Sockets
-
 struct DebugInfo
     frame_end_time_buffer::Vector{Int}
     frame_time_buffer::Vector{Int}
