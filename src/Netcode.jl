@@ -1,3 +1,5 @@
+module Netcode
+
 import Base64
 import DataFrames as DF
 import GarishPrint as GP
@@ -343,27 +345,4 @@ function start()
     return nothing
 end
 
-if length(ARGS) == 1
-    if ARGS[1] == "--app_server"
-        @info "Running as app_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
-
-        start_app_server(APP_SERVER_ADDRESS, ROOM_SIZE, USED_CONNECT_TOKEN_HISTORY_SIZE)
-
-    elseif ARGS[1] == "--auth_server"
-        @info "Running as auth_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
-
-        start_auth_server(AUTH_SERVER_ADDRESS)
-
-    elseif ARGS[1] == "--client"
-        @info "Running as client" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
-
-        start_client(AUTH_SERVER_ADDRESS, CLIENT_USERNAME, CLIENT_PASSWORD)
-
-    else
-        error("Invalid command line argument $(ARGS[1])")
-    end
-elseif length(ARGS) > 1
-    error("This script accepts at most one command line flag")
-end
-
-# start()
+end # module
