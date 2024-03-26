@@ -15,6 +15,6 @@ include("types.jl")
 include("serialization.jl")
 include("servers.jl")
 include("simulation.jl")
-include("utils.jl")
+include("miscellaneous.jl")
 
 end # module
