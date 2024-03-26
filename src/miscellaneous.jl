@@ -110,35 +110,10 @@ function ConnectionRequestPacket(connect_token_packet::ConnectTokenPacket)
     )
 end
 
-function create_df_debug_info(debug_info)
-    return DF.DataFrame(
-        # :frame_end_time_buffer => debug_info.frame_end_time_buffer,
-        :frame_time => debug_info.frame_time_buffer,
-        :update_time_theoretical => debug_info.update_time_theoretical_buffer,
-        :update_time_observed => debug_info.update_time_observed_buffer,
-        :sleep_time_theoretical => debug_info.sleep_time_theoretical_buffer,
-        :sleep_time_observed => debug_info.sleep_time_observed_buffer,
-    )
-end
-
 function pprint(x)
     GP.pprint(x)
     println()
     return nothing
-end
-
-function get_time(reference_time)
-    # get time (in units of nanoseconds) since reference_time
-    # places an upper bound on how much time can the program be running until time wraps around giving meaningless values
-    # the conversion to Int will actually throw an error when that happens
-
-    t = time_ns()
-
-    if t >= reference_time
-        return Int(t - reference_time)
-    else
-        return Int(t + (typemax(t) - reference_time))
-    end
 end
 
 function is_client_already_connected(room, client_netcode_address, client_id)
