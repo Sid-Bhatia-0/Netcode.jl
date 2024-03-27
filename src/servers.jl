@@ -18,7 +18,10 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
             continue
         end
 
-        if data[1] == PACKET_TYPE_CONNECTION_REQUEST_PACKET
+        packet_prefix = get_packet_prefix(data)
+        packet_type = get_packet_type(packet_prefix)
+
+        if packet_type == PACKET_TYPE_CONNECTION_REQUEST_PACKET
             if length(data) != SIZE_OF_CONNECTION_REQUEST_PACKET
                 @info "Invalid connection request packet received"
                 continue

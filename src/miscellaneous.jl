@@ -169,3 +169,7 @@ function try_add!(room::Vector{ClientSlot}, client_slot::ClientSlot)
 
     return false
 end
+
+get_packet_prefix(packet_data::Vector{UInt8}) = first(packet_data)
+
+get_packet_type(packet_prefix::TYPE_OF_PACKET_PREFIX) = convert(TYPE_OF_PACKET_TYPE, packet_prefix & 0xf)

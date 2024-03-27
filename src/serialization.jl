@@ -225,7 +225,9 @@ end
 
 function try_read(io::IO, ::Type{ConnectionRequestPacket}, expected_protocol_id)
     packet_prefix = read(io, TYPE_OF_PACKET_PREFIX)
-    if packet_prefix != PACKET_TYPE_CONNECTION_REQUEST_PACKET
+
+    packet_type = get_packet_type(packet_prefix)
+    if packet_type != PACKET_TYPE_CONNECTION_REQUEST_PACKET
         return nothing
     end
 
