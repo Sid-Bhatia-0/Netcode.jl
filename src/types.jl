@@ -95,6 +95,6 @@ struct ConnectionRequestPacket <: AbstractPacket
     encrypted_private_connect_token_data::Vector{UInt8}
 end
 
-struct VariableSizedUnsignedInteger
+struct CompactUnsignedInteger
     value::TYPE_OF_MAX_SEQUENCE_NUMBER
 end
