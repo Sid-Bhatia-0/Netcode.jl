@@ -96,5 +96,5 @@ struct ConnectionRequestPacket <: AbstractPacket
 end
 
 struct VariableSizedUnsignedInteger
-    sequence_number::TYPE_OF_MAX_SEQUENCE_NUMBER
+    value::TYPE_OF_MAX_SEQUENCE_NUMBER
 end
