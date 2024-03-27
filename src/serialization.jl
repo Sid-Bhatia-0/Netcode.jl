@@ -42,7 +42,7 @@ get_serialized_size(packet::AbstractPacket) = get_serialized_size_fields(packet)
 
 get_serialized_size(::ConnectTokenPacket) = SIZE_OF_CONNECT_TOKEN_PACKET
 
-function get_serialized_size(value::VariableSizeSequenceNumber)
+function get_serialized_size(value::VariableSizedUnsignedInteger)
     sequence_number = value.sequence_number
     num_bits_required = get_serialized_size(sequence_number) * 8 - leading_zeros(sequence_number)
     if num_bits_required == 0
@@ -124,7 +124,7 @@ Base.write(io::IO, packet::AbstractPacket) = write_fields(io, packet)
 
 Base.write(io::IO, packet::ConnectTokenPacket) = write_fields_and_padding(io, packet)
 
-function Base.write(io::IO, variable_size_sequence_number::VariableSizeSequenceNumber)
+function Base.write(io::IO, variable_size_sequence_number::VariableSizedUnsignedInteger)
     n = 0
 
     serialized_size = get_serialized_size(variable_size_sequence_number)
