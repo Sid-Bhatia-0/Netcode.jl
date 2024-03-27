@@ -42,6 +42,16 @@ get_serialized_size(packet::AbstractPacket) = get_serialized_size_fields(packet)
 
 get_serialized_size(::ConnectTokenPacket) = SIZE_OF_CONNECT_TOKEN_PACKET
 
+function get_serialized_size(value::CompactUnsignedInteger)
+    x = value.value
+    num_bits_required = get_serialized_size(x) * 8 - leading_zeros(x)
+    if num_bits_required == 0
+        return 1
+    else
+        return fld1(num_bits_required, 8)
+    end
+end
+
 function get_serialized_data(value)
     data = zeros(UInt8, get_serialized_size(value))
 
@@ -113,6 +123,22 @@ Base.write(io::IO, private_connect_token_associated_data::PrivateConnectTokenAss
 Base.write(io::IO, packet::AbstractPacket) = write_fields(io, packet)
 
 Base.write(io::IO, packet::ConnectTokenPacket) = write_fields_and_padding(io, packet)
+
+function Base.write(io::IO, value::CompactUnsignedInteger)
+    n = 0
+
+    serialized_size = get_serialized_size(value)
+    x = value.value
+
+    for i in 1:serialized_size
+        n += write(io, UInt8(x & 0xff))
+        x = x >> 8
+    end
+
+    @assert n == serialized_size
+
+    return n
+end
 
 function try_read(io::IO, ::Type{NetcodeAddress})
     address_type = read(io, TYPE_OF_ADDRESS_TYPE)
