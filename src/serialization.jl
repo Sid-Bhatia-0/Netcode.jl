@@ -42,6 +42,16 @@ get_serialized_size(packet::AbstractPacket) = get_serialized_size_fields(packet)
 
 get_serialized_size(::ConnectTokenPacket) = SIZE_OF_CONNECT_TOKEN_PACKET
 
+function get_serialized_size(value::VariableSizeSequenceNumber)
+    sequence_number = value.sequence_number
+    num_bits_required = get_serialized_size(sequence_number) * 8 - leading_zeros(sequence_number)
+    if num_bits_required == 0
+        return 1
+    else
+        return fld1(num_bits_required, 8)
+    end
+end
+
 function get_serialized_data(value)
     data = zeros(UInt8, get_serialized_size(value))
 
