@@ -94,3 +94,7 @@ struct ConnectionRequestPacket <: AbstractPacket
     nonce::Vector{UInt8}
     encrypted_private_connect_token_data::Vector{UInt8}
 end
+
+struct VariableSizeSequenceNumber
+    sequence_number::TYPE_OF_MAX_SEQUENCE_NUMBER
+end
