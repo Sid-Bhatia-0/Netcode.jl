@@ -124,6 +124,22 @@ Base.write(io::IO, packet::AbstractPacket) = write_fields(io, packet)
 
 Base.write(io::IO, packet::ConnectTokenPacket) = write_fields_and_padding(io, packet)
 
+function Base.write(io::IO, variable_size_sequence_number::VariableSizeSequenceNumber)
+    n = 0
+
+    serialized_size = get_serialized_size(variable_size_sequence_number)
+    sequence_number = variable_size_sequence_number.sequence_number
+
+    for i in 1:serialized_size
+        n += write(io, UInt8(sequence_number & 0xff))
+        sequence_number = sequence_number >> 8
+    end
+
+    @assert n == serialized_size
+
+    return n
+end
+
 function try_read(io::IO, ::Type{NetcodeAddress})
     address_type = read(io, TYPE_OF_ADDRESS_TYPE)
 
