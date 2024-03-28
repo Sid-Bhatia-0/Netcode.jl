@@ -1,11 +1,8 @@
 function setup_packet_receive_channel_task(channel, socket)
-    packet_number = 1
-
     task = errormonitor(
         @async while isopen(socket)
             host_port, data = Sockets.recvfrom(socket)
-            put!(channel, (packet_number, NetcodeAddress(host_port), data))
-            packet_number += 1
+            put!(channel, (NetcodeAddress(host_port), data))
         end
     )
 
@@ -25,7 +22,7 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
 
     @info "Server started listening"
 
-    packet_receive_channel = Channel{Tuple{Int, NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
+    packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
     packet_receive_channel_task = setup_packet_receive_channel_task(packet_receive_channel, socket)
 
     target_frame_rate = 60
@@ -42,7 +39,7 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
 
         while !isempty(packet_receive_channel)
             @show game_state.frame_number
-            packet_number, client_netcode_address, data = take!(packet_receive_channel)
+            client_netcode_address, data = take!(packet_receive_channel)
 
             if isempty(data)
                 continue
