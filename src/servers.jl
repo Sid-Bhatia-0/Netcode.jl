@@ -31,8 +31,6 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
     while true
         packet_number, client_netcode_address, data = take!(packet_receive_channel)
 
-        client_address = get_inetaddr(client_netcode_address)
-
         if isempty(data)
             continue
         end
@@ -69,8 +67,6 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
                 continue
             end
 
-            client_netcode_address = NetcodeAddress(client_address)
-
             if is_client_already_connected(room, client_netcode_address, private_connect_token.client_id)
                 @info "Client already connected"
                 continue
@@ -85,12 +81,12 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
 
             pprint(used_connect_token_history)
 
-            client_slot = ClientSlot(true, NetcodeAddress(client_address), private_connect_token.client_id)
+            client_slot = ClientSlot(true, client_netcode_address, private_connect_token.client_id)
 
             is_client_added = try_add!(room, client_slot)
 
             if is_client_added
-                @info "Client accepted" client_address
+                @info "Client accepted" client_netcode_address
             else
                 @info "no empty client slots available"
                 continue
