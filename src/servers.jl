@@ -72,11 +72,12 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
         end
 
         pprint(room)
+
+        return nothing
     else
         @info "Received unknown packet type"
+        return nothing
     end
-
-    return nothing
 end
 
 function start_app_server(app_server_address, room_size, used_connect_token_history_size, key, protocol_id, packet_receive_channel_size)
