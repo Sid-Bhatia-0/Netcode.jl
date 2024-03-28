@@ -224,7 +224,9 @@ function try_read(io::IO, ::Type{ConnectTokenPacket}, expected_protocol_id)
 end
 
 function try_read(io::IO, ::Type{ConnectionRequestPacket}, expected_protocol_id)
-    packet_type = read(io, TYPE_OF_PACKET_TYPE)
+    packet_prefix = read(io, TYPE_OF_PACKET_PREFIX)
+
+    packet_type = get_packet_type(packet_prefix)
     if packet_type != PACKET_TYPE_CONNECTION_REQUEST_PACKET
         return nothing
     end
@@ -249,7 +251,7 @@ function try_read(io::IO, ::Type{ConnectionRequestPacket}, expected_protocol_id)
     encrypted_private_connect_token_data = read(io, SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_TOKEN_DATA)
 
     return ConnectionRequestPacket(
-        packet_type,
+        packet_prefix,
         netcode_version_info,
         protocol_id,
         expire_timestamp,

@@ -87,7 +87,7 @@ struct ConnectTokenPacket <: AbstractPacket
 end
 
 struct ConnectionRequestPacket <: AbstractPacket
-    packet_type::TYPE_OF_PACKET_TYPE
+    packet_prefix::TYPE_OF_PACKET_PREFIX
     netcode_version_info::Vector{UInt8}
     protocol_id::TYPE_OF_PROTOCOL_ID
     expire_timestamp::TYPE_OF_TIMESTAMP
