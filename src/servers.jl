@@ -28,80 +28,110 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
     packet_receive_channel = Channel{Tuple{Int, NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
     packet_receive_channel_task = setup_packet_receive_channel_task(packet_receive_channel, socket)
 
-    while true
-        packet_number, client_netcode_address, data = take!(packet_receive_channel)
+    target_frame_rate = 60
+    total_frames = target_frame_rate * 20
+    target_ns_per_frame = 1_000_000_000 ÷ target_frame_rate
 
-        if isempty(data)
-            continue
+    debug_info = DebugInfo(Int[], Int[], Int[], Int[], Int[], Int[])
+    game_state = GameState(time_ns(), 1, target_frame_rate, target_ns_per_frame)
+
+    while game_state.frame_number <= total_frames
+        if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
+            @show game_state.frame_number
         end
 
-        packet_prefix = get_packet_prefix(data)
-        packet_type = get_packet_type(packet_prefix)
+        while !isempty(packet_receive_channel)
+            @show game_state.frame_number
+            packet_number, client_netcode_address, data = take!(packet_receive_channel)
 
-        if packet_type == PACKET_TYPE_CONNECTION_REQUEST_PACKET
-            if length(data) != SIZE_OF_CONNECTION_REQUEST_PACKET
-                @info "Invalid connection request packet received"
+            if isempty(data)
                 continue
             end
 
-            io = IOBuffer(data)
+            packet_prefix = get_packet_prefix(data)
+            packet_type = get_packet_type(packet_prefix)
 
-            connection_request_packet = try_read(io, ConnectionRequestPacket, protocol_id)
-            if isnothing(connection_request_packet)
-                @info "Invalid connection request packet received"
-                continue
-            end
+            if packet_type == PACKET_TYPE_CONNECTION_REQUEST_PACKET
+                if length(data) != SIZE_OF_CONNECTION_REQUEST_PACKET
+                    @info "Invalid connection request packet received"
+                    continue
+                end
 
-            pprint(connection_request_packet)
+                io = IOBuffer(data)
 
-            private_connect_token = try_decrypt(connection_request_packet, key)
-            if isnothing(private_connect_token)
-                @info "Invalid connection request packet received"
-                continue
-            end
+                connection_request_packet = try_read(io, ConnectionRequestPacket, protocol_id)
+                if isnothing(connection_request_packet)
+                    @info "Invalid connection request packet received"
+                    continue
+                end
 
-            pprint(private_connect_token)
+                pprint(connection_request_packet)
 
-            if !(app_server_netcode_address in private_connect_token.netcode_addresses)
-                @info "Invalid connection request packet received"
-                continue
-            end
+                private_connect_token = try_decrypt(connection_request_packet, key)
+                if isnothing(private_connect_token)
+                    @info "Invalid connection request packet received"
+                    continue
+                end
 
-            if is_client_already_connected(room, client_netcode_address, private_connect_token.client_id)
-                @info "Client already connected"
-                continue
-            end
+                pprint(private_connect_token)
 
-            connect_token_slot = ConnectTokenSlot(time_ns(), connection_request_packet.encrypted_private_connect_token_data[end - SIZE_OF_HMAC + 1 : end], client_netcode_address)
+                if !(app_server_netcode_address in private_connect_token.netcode_addresses)
+                    @info "Invalid connection request packet received"
+                    continue
+                end
 
-            if !try_add!(used_connect_token_history, connect_token_slot)
-                @info "connect token already used by another netcode_address"
-                continue
-            end
+                if is_client_already_connected(room, client_netcode_address, private_connect_token.client_id)
+                    @info "Client already connected"
+                    continue
+                end
 
-            pprint(used_connect_token_history)
+                connect_token_slot = ConnectTokenSlot(time_ns(), connection_request_packet.encrypted_private_connect_token_data[end - SIZE_OF_HMAC + 1 : end], client_netcode_address)
 
-            client_slot = ClientSlot(true, client_netcode_address, private_connect_token.client_id)
+                if !try_add!(used_connect_token_history, connect_token_slot)
+                    @info "connect token already used by another netcode_address"
+                    continue
+                end
 
-            is_client_added = try_add!(room, client_slot)
+                pprint(used_connect_token_history)
 
-            if is_client_added
-                @info "Client accepted" client_netcode_address
+                client_slot = ClientSlot(true, client_netcode_address, private_connect_token.client_id)
+
+                is_client_added = try_add!(room, client_slot)
+
+                if is_client_added
+                    @info "Client accepted" client_netcode_address
+                else
+                    @info "no empty client slots available"
+                    continue
+                end
+
+                pprint(room)
+
+                if all(client_slot -> client_slot.is_used, room)
+                    @info "Room full" app_server_address room
+                    break
+                end
             else
-                @info "no empty client slots available"
-                continue
+                @info "Received unknown packet type"
             end
-
-            pprint(room)
-
-            if all(client_slot -> client_slot.is_used, room)
-                @info "Room full" app_server_address room
-                break
-            end
-        else
-            @info "Received unknown packet type"
         end
+
+        simulate_update!(game_state, debug_info)
+
+        sleep_to_achieve_target_frame_rate!(game_state, debug_info)
+
+        push!(debug_info.frame_end_time_buffer, get_time(game_state.reference_time))
+        if game_state.frame_number == 1
+            push!(debug_info.frame_time_buffer, first(debug_info.frame_end_time_buffer))
+        else
+            push!(debug_info.frame_time_buffer, debug_info.frame_end_time_buffer[game_state.frame_number] - debug_info.frame_end_time_buffer[game_state.frame_number - 1])
+        end
+
+        game_state.frame_number = game_state.frame_number + 1
     end
+
+    df_debug_info = create_df_debug_info(debug_info)
+    display(DF.describe(df_debug_info, :min, :max, :mean, :std))
 
     return nothing
 end
