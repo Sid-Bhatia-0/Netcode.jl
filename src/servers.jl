@@ -9,6 +9,76 @@ function setup_packet_receive_channel_task(channel, socket)
     return task
 end
 
+function handle_packet!(client_netcode_address, data, app_server_netcode_address, room, used_connect_token_history)
+    if isempty(data)
+        return nothing
+    end
+
+    packet_prefix = get_packet_prefix(data)
+    packet_type = get_packet_type(packet_prefix)
+
+    if packet_type == PACKET_TYPE_CONNECTION_REQUEST_PACKET
+        if length(data) != SIZE_OF_CONNECTION_REQUEST_PACKET
+            @info "Invalid connection request packet received"
+            return nothing
+        end
+
+        io = IOBuffer(data)
+
+        connection_request_packet = try_read(io, ConnectionRequestPacket, protocol_id)
+        if isnothing(connection_request_packet)
+            @info "Invalid connection request packet received"
+            return nothing
+        end
+
+        pprint(connection_request_packet)
+
+        private_connect_token = try_decrypt(connection_request_packet, key)
+        if isnothing(private_connect_token)
+            @info "Invalid connection request packet received"
+            return nothing
+        end
+
+        pprint(private_connect_token)
+
+        if !(app_server_netcode_address in private_connect_token.netcode_addresses)
+            @info "Invalid connection request packet received"
+            return nothing
+        end
+
+        if is_client_already_connected(room, client_netcode_address, private_connect_token.client_id)
+            @info "Client already connected"
+            return nothing
+        end
+
+        connect_token_slot = ConnectTokenSlot(time_ns(), connection_request_packet.encrypted_private_connect_token_data[end - SIZE_OF_HMAC + 1 : end], client_netcode_address)
+
+        if !try_add!(used_connect_token_history, connect_token_slot)
+            @info "connect token already used by another netcode_address"
+            return nothing
+        end
+
+        pprint(used_connect_token_history)
+
+        client_slot = ClientSlot(true, client_netcode_address, private_connect_token.client_id)
+
+        is_client_added = try_add!(room, client_slot)
+
+        if is_client_added
+            @info "Client accepted" client_netcode_address
+        else
+            @info "no empty client slots available"
+            return nothing
+        end
+
+        pprint(room)
+    else
+        @info "Received unknown packet type"
+    end
+
+    return nothing
+end
+
 function start_app_server(app_server_address, room_size, used_connect_token_history_size, key, protocol_id, packet_receive_channel_size)
     room = fill(NULL_CLIENT_SLOT, room_size)
 
@@ -39,78 +109,10 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
 
         while !isempty(packet_receive_channel)
             @show game_state.frame_number
+
             client_netcode_address, data = take!(packet_receive_channel)
 
-            if isempty(data)
-                continue
-            end
-
-            packet_prefix = get_packet_prefix(data)
-            packet_type = get_packet_type(packet_prefix)
-
-            if packet_type == PACKET_TYPE_CONNECTION_REQUEST_PACKET
-                if length(data) != SIZE_OF_CONNECTION_REQUEST_PACKET
-                    @info "Invalid connection request packet received"
-                    continue
-                end
-
-                io = IOBuffer(data)
-
-                connection_request_packet = try_read(io, ConnectionRequestPacket, protocol_id)
-                if isnothing(connection_request_packet)
-                    @info "Invalid connection request packet received"
-                    continue
-                end
-
-                pprint(connection_request_packet)
-
-                private_connect_token = try_decrypt(connection_request_packet, key)
-                if isnothing(private_connect_token)
-                    @info "Invalid connection request packet received"
-                    continue
-                end
-
-                pprint(private_connect_token)
-
-                if !(app_server_netcode_address in private_connect_token.netcode_addresses)
-                    @info "Invalid connection request packet received"
-                    continue
-                end
-
-                if is_client_already_connected(room, client_netcode_address, private_connect_token.client_id)
-                    @info "Client already connected"
-                    continue
-                end
-
-                connect_token_slot = ConnectTokenSlot(time_ns(), connection_request_packet.encrypted_private_connect_token_data[end - SIZE_OF_HMAC + 1 : end], client_netcode_address)
-
-                if !try_add!(used_connect_token_history, connect_token_slot)
-                    @info "connect token already used by another netcode_address"
-                    continue
-                end
-
-                pprint(used_connect_token_history)
-
-                client_slot = ClientSlot(true, client_netcode_address, private_connect_token.client_id)
-
-                is_client_added = try_add!(room, client_slot)
-
-                if is_client_added
-                    @info "Client accepted" client_netcode_address
-                else
-                    @info "no empty client slots available"
-                    continue
-                end
-
-                pprint(room)
-
-                if all(client_slot -> client_slot.is_used, room)
-                    @info "Room full" app_server_address room
-                    break
-                end
-            else
-                @info "Received unknown packet type"
-            end
+            handle_packet!(client_netcode_address, data, app_server_netcode_address, room, used_connect_token_history)
         end
 
         simulate_update!(game_state, debug_info)
