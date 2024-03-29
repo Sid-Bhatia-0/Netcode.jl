@@ -35,15 +35,11 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
             return nothing
         end
 
-        pprint(connection_request_packet)
-
         private_connect_token = try_decrypt(connection_request_packet, key)
         if isnothing(private_connect_token)
             @info "Packet ignored: `try_decrypt` returned `nothing`"
             return nothing
         end
-
-        pprint(private_connect_token)
 
         if !(app_server_netcode_address in private_connect_token.netcode_addresses)
             @info "Packet ignored: `app_server_netcode_address` not found in `private_connect_token.netcode_addresses`"
@@ -62,8 +58,6 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
             return nothing
         end
 
-        pprint(used_connect_token_history)
-
         client_slot = ClientSlot(true, client_netcode_address, private_connect_token.client_id)
 
         is_client_added = try_add!(room, client_slot)
@@ -74,8 +68,6 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
             @info "Packet ignored: no empty client slots available"
             return nothing
         end
-
-        pprint(room)
 
         return nothing
     else
@@ -162,7 +154,6 @@ function start_client(auth_server_address, username, password, protocol_id, pack
     while game_state.frame_number <= total_frames
         if !isnothing(connect_token_packet) && client_state != CLIENT_STATE_CONNECTED
             connection_request_packet = ConnectionRequestPacket(connect_token_packet)
-            pprint(connection_request_packet)
 
             connection_request_packet_data = get_serialized_data(connection_request_packet)
 
@@ -232,8 +223,6 @@ function auth_handler(request, df_user_data, protocol_id, timeout_seconds, conne
             else
                 if bytes2hex(SHA.sha3_256(hashed_password * df_user_data[i, :salt])) == df_user_data[i, :hashed_salted_hashed_password]
                     connect_token_info = ConnectTokenInfo(protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses, i)
-
-                    pprint(connect_token_info)
 
                     connect_token_packet = ConnectTokenPacket(connect_token_info)
 
