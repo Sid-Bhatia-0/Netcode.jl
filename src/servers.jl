@@ -1,6 +1,6 @@
 function setup_packet_receive_channel_task(channel, socket)
     task = errormonitor(
-        @async while isopen(socket)
+        @async while true
             host_port, data = Sockets.recvfrom(socket)
             put!(channel, (NetcodeAddress(host_port), data))
         end
