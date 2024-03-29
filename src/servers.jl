@@ -155,11 +155,11 @@ function start_client(auth_server_address, username, password, protocol_id, pack
         if !isnothing(connect_token_packet) && client_state != CLIENT_STATE_CONNECTED
             connection_request_packet = ConnectionRequestPacket(connect_token_packet)
 
-            connection_request_packet_data = get_serialized_data(connection_request_packet)
+            data = get_serialized_data(connection_request_packet)
 
             app_server_address = get_inetaddr(first(connect_token_packet.netcode_addresses))
 
-            Sockets.send(socket, app_server_address.host, app_server_address.port, connection_request_packet_data)
+            Sockets.send(socket, app_server_address.host, app_server_address.port, data)
 
             client_state = CLIENT_STATE_CONNECTED
         end
