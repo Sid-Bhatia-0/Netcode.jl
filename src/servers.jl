@@ -156,10 +156,11 @@ function start_client(auth_server_address, username, password, protocol_id, pack
     debug_info = DebugInfo(Int[], Int[], Int[], Int[], Int[], Int[])
     game_state = GameState(time_ns(), 1, target_frame_rate, target_ns_per_frame)
 
+    client_state = CLIENT_STATE_DISCONNECTED
     connect_token_packet = nothing
 
     while game_state.frame_number <= total_frames
-        if !isnothing(connect_token_packet)
+        if !isnothing(connect_token_packet) && client_state != CLIENT_STATE_CONNECTED
             connection_request_packet = ConnectionRequestPacket(connect_token_packet)
             pprint(connection_request_packet)
 
@@ -169,7 +170,7 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
             Sockets.send(socket, app_server_address.host, app_server_address.port, connection_request_packet_data)
 
-            connect_token_packet = nothing
+            client_state = CLIENT_STATE_CONNECTED
         end
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
