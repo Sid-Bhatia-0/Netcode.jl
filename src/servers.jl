@@ -161,6 +161,12 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
             Sockets.send(socket, app_server_address.host, app_server_address.port, data)
 
+            packet_size = length(data)
+            packet_prefix = get_packet_prefix(data)
+            packet_type = get_packet_type(packet_prefix)
+
+            @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type
+
             client_state = CLIENT_STATE_CONNECTED
         end
 
