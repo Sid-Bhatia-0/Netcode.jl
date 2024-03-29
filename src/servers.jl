@@ -1,6 +1,6 @@
 function setup_packet_receive_channel_task(channel, socket)
     task = errormonitor(
-        @async while isopen(socket)
+        @async while true
             host_port, data = Sockets.recvfrom(socket)
             put!(channel, (NetcodeAddress(host_port), data))
         end
@@ -35,15 +35,11 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
             return nothing
         end
 
-        pprint(connection_request_packet)
-
         private_connect_token = try_decrypt(connection_request_packet, key)
         if isnothing(private_connect_token)
             @info "Packet ignored: `try_decrypt` returned `nothing`"
             return nothing
         end
-
-        pprint(private_connect_token)
 
         if !(app_server_netcode_address in private_connect_token.netcode_addresses)
             @info "Packet ignored: `app_server_netcode_address` not found in `private_connect_token.netcode_addresses`"
@@ -62,8 +58,6 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
             return nothing
         end
 
-        pprint(used_connect_token_history)
-
         client_slot = ClientSlot(true, client_netcode_address, private_connect_token.client_id)
 
         is_client_added = try_add!(room, client_slot)
@@ -74,8 +68,6 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
             @info "Packet ignored: no empty client slots available"
             return nothing
         end
-
-        pprint(room)
 
         return nothing
     else
@@ -140,31 +132,81 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
     return nothing
 end
 
-function start_client(auth_server_address, username, password, protocol_id)
+function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size)
     hashed_password = bytes2hex(SHA.sha3_256(password))
-
-    response = HTTP.get("http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port))
-
-    if length(response.body) != SIZE_OF_CONNECT_TOKEN_PACKET
-        error("Invalid connect token packet received")
-    end
-
-    connect_token_packet = try_read(IOBuffer(response.body), ConnectTokenPacket, protocol_id)
-    if isnothing(connect_token_packet)
-        error("Invalid connect token packet received")
-    end
-
-    connection_request_packet = ConnectionRequestPacket(connect_token_packet)
-    pprint(connection_request_packet)
+    auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)
 
     socket = Sockets.UDPSocket()
 
-    connection_request_packet_data = get_serialized_data(connection_request_packet)
+    packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
+    packet_receive_channel_task = setup_packet_receive_channel_task(packet_receive_channel, socket)
 
-    app_server_address = get_inetaddr(first(connect_token_packet.netcode_addresses))
-    @info "Client obtained app_server_address" app_server_address
+    target_frame_rate = 60
+    total_frames = target_frame_rate * 20
+    target_ns_per_frame = 1_000_000_000 ÷ target_frame_rate
 
-    Sockets.send(socket, app_server_address.host, app_server_address.port, connection_request_packet_data)
+    debug_info = DebugInfo(Int[], Int[], Int[], Int[], Int[], Int[])
+    game_state = GameState(time_ns(), 1, target_frame_rate, target_ns_per_frame)
+
+    client_state = CLIENT_STATE_DISCONNECTED
+    connect_token_packet = nothing
+
+    while game_state.frame_number <= total_frames
+        if !isnothing(connect_token_packet) && client_state != CLIENT_STATE_CONNECTED
+            connection_request_packet = ConnectionRequestPacket(connect_token_packet)
+
+            data = get_serialized_data(connection_request_packet)
+
+            app_server_address = get_inetaddr(first(connect_token_packet.netcode_addresses))
+
+            Sockets.send(socket, app_server_address.host, app_server_address.port, data)
+
+            packet_size = length(data)
+            packet_prefix = get_packet_prefix(data)
+            packet_type = get_packet_type(packet_prefix)
+
+            @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type
+
+            client_state = CLIENT_STATE_CONNECTED
+        end
+
+        if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
+            @show game_state.frame_number
+        end
+
+        if game_state.frame_number == 5 * target_frame_rate
+            @info "Connect token requested" game_state.frame_number
+
+            response = HTTP.get(auth_server_url)
+
+            if length(response.body) != SIZE_OF_CONNECT_TOKEN_PACKET
+                error("Connect token invalid: unexpected `packet_size`")
+            end
+
+            connect_token_packet = try_read(IOBuffer(response.body), ConnectTokenPacket, protocol_id)
+            if isnothing(connect_token_packet)
+                error("Connect token invalid: `try_read` returned `nothing`")
+            end
+
+            @info "Connect token received"
+        end
+
+        simulate_update!(game_state, debug_info)
+
+        sleep_to_achieve_target_frame_rate!(game_state, debug_info)
+
+        push!(debug_info.frame_end_time_buffer, get_time(game_state.reference_time))
+        if game_state.frame_number == 1
+            push!(debug_info.frame_time_buffer, first(debug_info.frame_end_time_buffer))
+        else
+            push!(debug_info.frame_time_buffer, debug_info.frame_end_time_buffer[game_state.frame_number] - debug_info.frame_end_time_buffer[game_state.frame_number - 1])
+        end
+
+        game_state.frame_number = game_state.frame_number + 1
+    end
+
+    df_debug_info = create_df_debug_info(debug_info)
+    display(DF.describe(df_debug_info, :min, :max, :mean, :std))
 
     return nothing
 end
@@ -187,8 +229,6 @@ function auth_handler(request, df_user_data, protocol_id, timeout_seconds, conne
             else
                 if bytes2hex(SHA.sha3_256(hashed_password * df_user_data[i, :salt])) == df_user_data[i, :hashed_salted_hashed_password]
                     connect_token_info = ConnectTokenInfo(protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses, i)
-
-                    pprint(connect_token_info)
 
                     connect_token_packet = ConnectTokenPacket(connect_token_info)
 

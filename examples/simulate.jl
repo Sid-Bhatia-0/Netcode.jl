@@ -48,7 +48,7 @@ if length(ARGS) == 1
     elseif ARGS[1] == "--client"
         @info "Running as client" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
 
-        Netcode.start_client(AUTH_SERVER_ADDRESS, CLIENT_USERNAME, CLIENT_PASSWORD, PROTOCOL_ID)
+        Netcode.start_client(AUTH_SERVER_ADDRESS, CLIENT_USERNAME, CLIENT_PASSWORD, PROTOCOL_ID, PACKET_RECEIVE_CHANNEL_SIZE)
 
     else
         error("Invalid command line argument $(ARGS[1])")
