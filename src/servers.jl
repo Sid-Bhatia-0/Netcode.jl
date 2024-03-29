@@ -9,7 +9,7 @@ function setup_packet_receive_channel_task(channel, socket)
     return task
 end
 
-function handle_packet!(client_netcode_address, data, app_server_netcode_address, room, used_connect_token_history)
+function handle_packet!(client_netcode_address, data, app_server_netcode_address, room, used_connect_token_history, protocol_id, key)
     if isempty(data)
         return nothing
     end
@@ -113,7 +113,7 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
 
             client_netcode_address, data = take!(packet_receive_channel)
 
-            handle_packet!(client_netcode_address, data, app_server_netcode_address, room, used_connect_token_history)
+            handle_packet!(client_netcode_address, data, app_server_netcode_address, room, used_connect_token_history, protocol_id, key)
         end
 
         simulate_update!(game_state, debug_info)
