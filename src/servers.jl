@@ -10,7 +10,9 @@ function setup_packet_receive_channel_task(channel, socket)
 end
 
 function handle_packet!(client_netcode_address, data, app_server_netcode_address, room, used_connect_token_history, protocol_id, key)
-    if isempty(data)
+    packet_size = length(data)
+
+    if packet_size == 0
         return nothing
     end
 
@@ -18,7 +20,7 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
     packet_type = get_packet_type(packet_prefix)
 
     if packet_type == PACKET_TYPE_CONNECTION_REQUEST_PACKET
-        if length(data) != SIZE_OF_CONNECTION_REQUEST_PACKET
+        if packet_size != SIZE_OF_CONNECTION_REQUEST_PACKET
             @info "Invalid connection request packet received"
             return nothing
         end
