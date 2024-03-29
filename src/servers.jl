@@ -1,4 +1,90 @@
-function start_app_server(app_server_address, room_size, used_connect_token_history_size, key, protocol_id)
+function setup_packet_receive_channel_task(channel, socket)
+    task = errormonitor(
+        @async while isopen(socket)
+            host_port, data = Sockets.recvfrom(socket)
+            put!(channel, (NetcodeAddress(host_port), data))
+        end
+    )
+
+    return task
+end
+
+function handle_packet!(client_netcode_address, data, app_server_netcode_address, room, used_connect_token_history, protocol_id, key)
+    packet_size = length(data)
+
+    if packet_size == 0
+        return nothing
+    end
+
+    packet_prefix = get_packet_prefix(data)
+    packet_type = get_packet_type(packet_prefix)
+
+    @info "Packet received:" client_netcode_address packet_size packet_prefix packet_type
+
+    if packet_type == PACKET_TYPE_CONNECTION_REQUEST_PACKET
+        if packet_size != SIZE_OF_CONNECTION_REQUEST_PACKET
+            @info "Packet ignored: unexpected `packet_size`"
+            return nothing
+        end
+
+        io = IOBuffer(data)
+
+        connection_request_packet = try_read(io, ConnectionRequestPacket, protocol_id)
+        if isnothing(connection_request_packet)
+            @info "Packet ignored: `try_read` returned `nothing`"
+            return nothing
+        end
+
+        pprint(connection_request_packet)
+
+        private_connect_token = try_decrypt(connection_request_packet, key)
+        if isnothing(private_connect_token)
+            @info "Packet ignored: `try_decrypt` returned `nothing`"
+            return nothing
+        end
+
+        pprint(private_connect_token)
+
+        if !(app_server_netcode_address in private_connect_token.netcode_addresses)
+            @info "Packet ignored: `app_server_netcode_address` not found in `private_connect_token.netcode_addresses`"
+            return nothing
+        end
+
+        if is_client_already_connected(room, client_netcode_address, private_connect_token.client_id)
+            @info "Packet ignored: `is_client_already_connected` returned `true`"
+            return nothing
+        end
+
+        connect_token_slot = ConnectTokenSlot(time_ns(), connection_request_packet.encrypted_private_connect_token_data[end - SIZE_OF_HMAC + 1 : end], client_netcode_address)
+
+        if !try_add!(used_connect_token_history, connect_token_slot)
+            @info "Packet ignored: connect token already used by another `client_id` or `netcode_address`"
+            return nothing
+        end
+
+        pprint(used_connect_token_history)
+
+        client_slot = ClientSlot(true, client_netcode_address, private_connect_token.client_id)
+
+        is_client_added = try_add!(room, client_slot)
+
+        if is_client_added
+            @info "Packet accepted"
+        else
+            @info "Packet ignored: no empty client slots available"
+            return nothing
+        end
+
+        pprint(room)
+
+        return nothing
+    else
+        @info "Packet ignored: unknown `packet_type`"
+        return nothing
+    end
+end
+
+function start_app_server(app_server_address, room_size, used_connect_token_history_size, key, protocol_id, packet_receive_channel_size)
     room = fill(NULL_CLIENT_SLOT, room_size)
 
     used_connect_token_history = fill(NULL_CONNECT_TOKEN_SLOT, used_connect_token_history_size)
@@ -11,82 +97,45 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
 
     @info "Server started listening"
 
-    while true
-        client_address, data = Sockets.recvfrom(socket)
+    packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
+    packet_receive_channel_task = setup_packet_receive_channel_task(packet_receive_channel, socket)
 
-        if isempty(data)
-            continue
+    target_frame_rate = 60
+    total_frames = target_frame_rate * 20
+    target_ns_per_frame = 1_000_000_000 ÷ target_frame_rate
+
+    debug_info = DebugInfo(Int[], Int[], Int[], Int[], Int[], Int[])
+    game_state = GameState(time_ns(), 1, target_frame_rate, target_ns_per_frame)
+
+    while game_state.frame_number <= total_frames
+        if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
+            @show game_state.frame_number
         end
 
-        packet_prefix = get_packet_prefix(data)
-        packet_type = get_packet_type(packet_prefix)
+        while !isempty(packet_receive_channel)
+            @show game_state.frame_number
 
-        if packet_type == PACKET_TYPE_CONNECTION_REQUEST_PACKET
-            if length(data) != SIZE_OF_CONNECTION_REQUEST_PACKET
-                @info "Invalid connection request packet received"
-                continue
-            end
+            client_netcode_address, data = take!(packet_receive_channel)
 
-            io = IOBuffer(data)
+            handle_packet!(client_netcode_address, data, app_server_netcode_address, room, used_connect_token_history, protocol_id, key)
+        end
 
-            connection_request_packet = try_read(io, ConnectionRequestPacket, protocol_id)
-            if isnothing(connection_request_packet)
-                @info "Invalid connection request packet received"
-                continue
-            end
+        simulate_update!(game_state, debug_info)
 
-            pprint(connection_request_packet)
+        sleep_to_achieve_target_frame_rate!(game_state, debug_info)
 
-            private_connect_token = try_decrypt(connection_request_packet, key)
-            if isnothing(private_connect_token)
-                @info "Invalid connection request packet received"
-                continue
-            end
-
-            pprint(private_connect_token)
-
-            if !(app_server_netcode_address in private_connect_token.netcode_addresses)
-                @info "Invalid connection request packet received"
-                continue
-            end
-
-            client_netcode_address = NetcodeAddress(client_address)
-
-            if is_client_already_connected(room, client_netcode_address, private_connect_token.client_id)
-                @info "Client already connected"
-                continue
-            end
-
-            connect_token_slot = ConnectTokenSlot(time_ns(), connection_request_packet.encrypted_private_connect_token_data[end - SIZE_OF_HMAC + 1 : end], client_netcode_address)
-
-            if !try_add!(used_connect_token_history, connect_token_slot)
-                @info "connect token already used by another netcode_address"
-                continue
-            end
-
-            pprint(used_connect_token_history)
-
-            client_slot = ClientSlot(true, NetcodeAddress(client_address), private_connect_token.client_id)
-
-            is_client_added = try_add!(room, client_slot)
-
-            if is_client_added
-                @info "Client accepted" client_address
-            else
-                @info "no empty client slots available"
-                continue
-            end
-
-            pprint(room)
-
-            if all(client_slot -> client_slot.is_used, room)
-                @info "Room full" app_server_address room
-                break
-            end
+        push!(debug_info.frame_end_time_buffer, get_time(game_state.reference_time))
+        if game_state.frame_number == 1
+            push!(debug_info.frame_time_buffer, first(debug_info.frame_end_time_buffer))
         else
-            @info "Received unknown packet type"
+            push!(debug_info.frame_time_buffer, debug_info.frame_end_time_buffer[game_state.frame_number] - debug_info.frame_end_time_buffer[game_state.frame_number - 1])
         end
+
+        game_state.frame_number = game_state.frame_number + 1
     end
+
+    df_debug_info = create_df_debug_info(debug_info)
+    display(DF.describe(df_debug_info, :min, :max, :mean, :std))
 
     return nothing
 end
