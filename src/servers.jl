@@ -19,9 +19,11 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
     packet_prefix = get_packet_prefix(data)
     packet_type = get_packet_type(packet_prefix)
 
+    @info "Packet received:" client_netcode_address packet_size packet_prefix packet_type
+
     if packet_type == PACKET_TYPE_CONNECTION_REQUEST_PACKET
         if packet_size != SIZE_OF_CONNECTION_REQUEST_PACKET
-            @info "Invalid connection request packet received"
+            @info "Packet ignored: unexpected `packet_size`"
             return nothing
         end
 
@@ -29,7 +31,7 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
 
         connection_request_packet = try_read(io, ConnectionRequestPacket, protocol_id)
         if isnothing(connection_request_packet)
-            @info "Invalid connection request packet received"
+            @info "Packet ignored: `try_read` returned `nothing`"
             return nothing
         end
 
@@ -37,26 +39,26 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
 
         private_connect_token = try_decrypt(connection_request_packet, key)
         if isnothing(private_connect_token)
-            @info "Invalid connection request packet received"
+            @info "Packet ignored: `try_decrypt` returned `nothing`"
             return nothing
         end
 
         pprint(private_connect_token)
 
         if !(app_server_netcode_address in private_connect_token.netcode_addresses)
-            @info "Invalid connection request packet received"
+            @info "Packet ignored: `app_server_netcode_address` not found in `private_connect_token.netcode_addresses`"
             return nothing
         end
 
         if is_client_already_connected(room, client_netcode_address, private_connect_token.client_id)
-            @info "Client already connected"
+            @info "Packet ignored: `is_client_already_connected` returned `true`"
             return nothing
         end
 
         connect_token_slot = ConnectTokenSlot(time_ns(), connection_request_packet.encrypted_private_connect_token_data[end - SIZE_OF_HMAC + 1 : end], client_netcode_address)
 
         if !try_add!(used_connect_token_history, connect_token_slot)
-            @info "connect token already used by another netcode_address"
+            @info "Packet ignored: connect token already used by another `client_id` or `netcode_address`"
             return nothing
         end
 
@@ -67,9 +69,9 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
         is_client_added = try_add!(room, client_slot)
 
         if is_client_added
-            @info "Client accepted" client_netcode_address
+            @info "Packet accepted"
         else
-            @info "no empty client slots available"
+            @info "Packet ignored: no empty client slots available"
             return nothing
         end
 
@@ -77,7 +79,7 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
 
         return nothing
     else
-        @info "Received unknown packet type"
+        @info "Packet ignored: unknown `packet_type`"
         return nothing
     end
 end
