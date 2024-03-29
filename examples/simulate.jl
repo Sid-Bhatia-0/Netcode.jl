@@ -33,12 +33,13 @@ const CLIENT_USERNAME = "user1"
 const CLIENT_PASSWORD = "password1"
 
 const PACKET_RECEIVE_CHANNEL_SIZE = 32
+const PACKET_SEND_CHANNEL_SIZE = 32
 
 if length(ARGS) == 1
     if ARGS[1] == "--app_server"
         @info "Running as app_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
 
-        Netcode.start_app_server(APP_SERVER_ADDRESS, ROOM_SIZE, USED_CONNECT_TOKEN_HISTORY_SIZE, SERVER_SIDE_SHARED_KEY, PROTOCOL_ID, PACKET_RECEIVE_CHANNEL_SIZE)
+        Netcode.start_app_server(APP_SERVER_ADDRESS, ROOM_SIZE, USED_CONNECT_TOKEN_HISTORY_SIZE, SERVER_SIDE_SHARED_KEY, PROTOCOL_ID, PACKET_RECEIVE_CHANNEL_SIZE, PACKET_SEND_CHANNEL_SIZE)
 
     elseif ARGS[1] == "--auth_server"
         @info "Running as auth_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
@@ -48,7 +49,7 @@ if length(ARGS) == 1
     elseif ARGS[1] == "--client"
         @info "Running as client" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
 
-        Netcode.start_client(AUTH_SERVER_ADDRESS, CLIENT_USERNAME, CLIENT_PASSWORD, PROTOCOL_ID, PACKET_RECEIVE_CHANNEL_SIZE)
+        Netcode.start_client(AUTH_SERVER_ADDRESS, CLIENT_USERNAME, CLIENT_PASSWORD, PROTOCOL_ID, PACKET_RECEIVE_CHANNEL_SIZE, PACKET_SEND_CHANNEL_SIZE)
 
     else
         error("Invalid command line argument $(ARGS[1])")
