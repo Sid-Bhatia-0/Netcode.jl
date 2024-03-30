@@ -9,6 +9,18 @@ function setup_packet_receive_channel_task(channel, socket)
     return task
 end
 
+function setup_packet_send_channel_task(channel, socket)
+    task = errormonitor(
+        @async while true
+            netcode_address, data = take!(channel)
+            address = get_inetaddr(netcode_address)
+            Sockets.send(socket, address.host, address.port, data)
+        end
+    )
+
+    return task
+end
+
 function handle_packet!(client_netcode_address, data, app_server_netcode_address, room, used_connect_token_history, protocol_id, key)
     packet_size = length(data)
 
@@ -76,7 +88,7 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
     end
 end
 
-function start_app_server(app_server_address, room_size, used_connect_token_history_size, key, protocol_id, packet_receive_channel_size)
+function start_app_server(app_server_address, room_size, used_connect_token_history_size, key, protocol_id, packet_receive_channel_size, packet_send_channel_size)
     room = fill(NULL_CLIENT_SLOT, room_size)
 
     used_connect_token_history = fill(NULL_CONNECT_TOKEN_SLOT, used_connect_token_history_size)
@@ -91,6 +103,9 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
 
     packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
     packet_receive_channel_task = setup_packet_receive_channel_task(packet_receive_channel, socket)
+
+    packet_send_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_send_channel_size)
+    packet_send_channel_task = setup_packet_send_channel_task(packet_send_channel, socket)
 
     target_frame_rate = 60
     total_frames = target_frame_rate * 20
@@ -132,7 +147,7 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
     return nothing
 end
 
-function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size)
+function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, packet_send_channel_size)
     hashed_password = bytes2hex(SHA.sha3_256(password))
     auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)
 
@@ -140,6 +155,9 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
     packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
     packet_receive_channel_task = setup_packet_receive_channel_task(packet_receive_channel, socket)
+
+    packet_send_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_send_channel_size)
+    packet_send_channel_task = setup_packet_send_channel_task(packet_send_channel, socket)
 
     target_frame_rate = 60
     total_frames = target_frame_rate * 20
@@ -157,9 +175,9 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
             data = get_serialized_data(connection_request_packet)
 
-            app_server_address = get_inetaddr(first(connect_token_packet.netcode_addresses))
+            app_server_netcode_address = first(connect_token_packet.netcode_addresses)
 
-            Sockets.send(socket, app_server_address.host, app_server_address.port, data)
+            put!(packet_send_channel, (app_server_netcode_address, data))
 
             packet_size = length(data)
             packet_prefix = get_packet_prefix(data)
