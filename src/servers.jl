@@ -175,9 +175,9 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
             data = get_serialized_data(connection_request_packet)
 
-            app_server_address = get_inetaddr(first(connect_token_packet.netcode_addresses))
+            app_server_netcode_address = first(connect_token_packet.netcode_addresses)
 
-            Sockets.send(socket, app_server_address.host, app_server_address.port, data)
+            put!(packet_send_channel, (app_server_netcode_address, data))
 
             packet_size = length(data)
             packet_prefix = get_packet_prefix(data)
