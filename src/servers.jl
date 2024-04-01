@@ -106,8 +106,7 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
 
     @info "Server started listening"
 
-    inet_address = get_inetaddr(app_server_state.netcode_address)
-    Sockets.bind(socket, inet_address.host, inet_address.port)
+    Sockets.bind(socket, app_server_inet_address.host, app_server_inet_address.port)
 
     setup_packet_receive_channel_task(packet_receive_channel, socket)
     setup_packet_send_channel_task(packet_send_channel, socket)
