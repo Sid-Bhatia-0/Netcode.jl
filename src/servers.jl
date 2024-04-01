@@ -94,8 +94,9 @@ function handle_packet!(app_server_state, client_netcode_address, data)
     end
 end
 
-function start_app_server(app_server_state)
-    protocol_id = app_server_state.protocol_id
+function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, used_connect_token_history_size)
+    app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, used_connect_token_history_size)
+
     key = app_server_state.key
     app_server_netcode_address = app_server_state.netcode_address
     socket = app_server_state.socket

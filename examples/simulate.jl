@@ -35,21 +35,11 @@ const CLIENT_PASSWORD = "password1"
 const PACKET_RECEIVE_CHANNEL_SIZE = 32
 const PACKET_SEND_CHANNEL_SIZE = 32
 
-const APP_SERVER_STATE = Netcode.AppServerState(
-    PROTOCOL_ID,
-    SERVER_SIDE_SHARED_KEY,
-    APP_SERVER_ADDRESS,
-    PACKET_RECEIVE_CHANNEL_SIZE,
-    PACKET_SEND_CHANNEL_SIZE,
-    ROOM_SIZE,
-    USED_CONNECT_TOKEN_HISTORY_SIZE,
-)
-
 if length(ARGS) == 1
     if ARGS[1] == "--app_server"
         @info "Running as app_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
 
-        Netcode.start_app_server(APP_SERVER_STATE)
+        Netcode.start_app_server(PROTOCOL_ID, SERVER_SIDE_SHARED_KEY, APP_SERVER_ADDRESS, PACKET_RECEIVE_CHANNEL_SIZE, PACKET_SEND_CHANNEL_SIZE, ROOM_SIZE, USED_CONNECT_TOKEN_HISTORY_SIZE)
 
     elseif ARGS[1] == "--auth_server"
         @info "Running as auth_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
