@@ -115,14 +115,23 @@ function AppServerState(inet_address::Union{Sockets.InetAddr{Sockets.IPv4}, Sock
 
     netcode_address = NetcodeAddress(inet_address)
 
+    room = fill(NULL_CLIENT_SLOT, room_size)
+
+    used_connect_token_history = fill(NULL_CONNECT_TOKEN_SLOT, used_connect_token_history_size)
+
+    socket = Sockets.UDPSocket()
+
+    Sockets.bind(socket, inet_address.host, inet_address.port)
+
     return AppServerState(
         netcode_address,
-        room_size,
-        used_connect_token_history_size,
         key,
         protocol_id,
         packet_receive_channel_size,
         packet_send_channel_size,
+        room,
+        used_connect_token_history,
+        socket,
     )
 end
 
