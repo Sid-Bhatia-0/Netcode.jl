@@ -121,8 +121,6 @@ function AppServerState(inet_address::Union{Sockets.InetAddr{Sockets.IPv4}, Sock
 
     socket = Sockets.UDPSocket()
 
-    Sockets.bind(socket, inet_address.host, inet_address.port)
-
     packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
 
     packet_send_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_send_channel_size)
