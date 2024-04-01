@@ -156,13 +156,10 @@ function start_client(auth_server_address, username, password, protocol_id, pack
     hashed_password = bytes2hex(SHA.sha3_256(password))
     auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)
 
-    socket = Sockets.UDPSocket()
+    client_state = ClientState(protocol_id, packet_receive_channel_size, packet_send_channel_size)
 
-    packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
-    packet_receive_channel_task = setup_packet_receive_channel_task(packet_receive_channel, socket)
-
-    packet_send_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_send_channel_size)
-    packet_send_channel_task = setup_packet_send_channel_task(packet_send_channel, socket)
+    setup_packet_receive_channel_task(client_state.packet_receive_channel, client_state.socket)
+    setup_packet_send_channel_task(client_state.packet_send_channel, client_state.socket)
 
     target_frame_rate = 60
     total_frames = target_frame_rate * 20
@@ -171,18 +168,17 @@ function start_client(auth_server_address, username, password, protocol_id, pack
     debug_info = DebugInfo(Int[], Int[], Int[], Int[], Int[], Int[])
     game_state = GameState(time_ns(), 1, target_frame_rate, target_ns_per_frame)
 
-    client_state = CLIENT_STATE_DISCONNECTED
     connect_token_packet = nothing
 
     while game_state.frame_number <= total_frames
-        if !isnothing(connect_token_packet) && client_state != CLIENT_STATE_CONNECTED
+        if !isnothing(connect_token_packet) && client_state.state_machine_state != CLIENT_STATE_CONNECTED
             connection_request_packet = ConnectionRequestPacket(connect_token_packet)
 
             data = get_serialized_data(connection_request_packet)
 
             app_server_netcode_address = first(connect_token_packet.netcode_addresses)
 
-            put!(packet_send_channel, (app_server_netcode_address, data))
+            put!(client_state.packet_send_channel, (app_server_netcode_address, data))
 
             packet_size = length(data)
             packet_prefix = get_packet_prefix(data)
@@ -190,7 +186,7 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
             @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type
 
-            client_state = CLIENT_STATE_CONNECTED
+            client_state.state_machine_state = CLIENT_STATE_CONNECTED
         end
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate

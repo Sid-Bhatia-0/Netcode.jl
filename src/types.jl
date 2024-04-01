@@ -109,3 +109,11 @@ struct AppServerState
     room::Vector{ClientSlot}
     used_connect_token_history::Vector{ConnectTokenSlot}
 end
+
+mutable struct ClientState
+    protocol_id::TYPE_OF_PROTOCOL_ID
+    socket::Sockets.UDPSocket
+    packet_receive_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
+    packet_send_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
+    state_machine_state::Int
+end

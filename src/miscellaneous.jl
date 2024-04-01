@@ -137,6 +137,24 @@ function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{S
     )
 end
 
+function ClientState(protocol_id, packet_receive_channel_size, packet_send_channel_size)
+    socket = Sockets.UDPSocket()
+
+    packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
+
+    packet_send_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_send_channel_size)
+
+    state_machine_state = CLIENT_STATE_DISCONNECTED
+
+    return ClientState(
+        protocol_id,
+        socket,
+        packet_receive_channel,
+        packet_send_channel,
+        state_machine_state,
+    )
+end
+
 function pprint(x)
     GP.pprint(x)
     println()
