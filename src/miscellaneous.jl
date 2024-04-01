@@ -110,7 +110,7 @@ function ConnectionRequestPacket(connect_token_packet::ConnectTokenPacket)
     )
 end
 
-function AppServerState(inet_address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}, room_size, used_connect_token_history_size, key, protocol_id, packet_receive_channel_size, packet_send_channel_size)
+function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}, packet_receive_channel_size, packet_send_channel_size, room_size, used_connect_token_history_size)
     @assert length(key) == SIZE_OF_KEY
 
     netcode_address = NetcodeAddress(inet_address)
@@ -126,14 +126,14 @@ function AppServerState(inet_address::Union{Sockets.InetAddr{Sockets.IPv4}, Sock
     packet_send_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_send_channel_size)
 
     return AppServerState(
-        netcode_address,
-        key,
         protocol_id,
-        room,
-        used_connect_token_history,
+        key,
+        netcode_address,
         socket,
         packet_receive_channel,
         packet_send_channel,
+        room,
+        used_connect_token_history,
     )
 end
 

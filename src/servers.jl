@@ -89,14 +89,14 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
 end
 
 function start_app_server(app_server_state)
-    app_server_netcode_address = app_server_state.netcode_address
-    key = app_server_state.key
     protocol_id = app_server_state.protocol_id
-    room = app_server_state.room
-    used_connect_token_history = app_server_state.used_connect_token_history
+    key = app_server_state.key
+    app_server_netcode_address = app_server_state.netcode_address
     socket = app_server_state.socket
     packet_receive_channel = app_server_state.packet_receive_channel
     packet_send_channel = app_server_state.packet_send_channel
+    room = app_server_state.room
+    used_connect_token_history = app_server_state.used_connect_token_history
 
     @info "Server started listening"
 

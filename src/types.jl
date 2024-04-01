@@ -100,12 +100,12 @@ struct CompactUnsignedInteger
 end
 
 struct AppServerState
-    netcode_address::NetcodeAddress
-    key::Vector{UInt8}
     protocol_id::TYPE_OF_PROTOCOL_ID
-    room::Vector{ClientSlot}
-    used_connect_token_history::Vector{ConnectTokenSlot}
+    key::Vector{UInt8}
+    netcode_address::NetcodeAddress
     socket::Sockets.UDPSocket
     packet_receive_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     packet_send_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
+    room::Vector{ClientSlot}
+    used_connect_token_history::Vector{ConnectTokenSlot}
 end
