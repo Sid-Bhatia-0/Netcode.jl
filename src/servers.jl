@@ -22,12 +22,6 @@ function setup_packet_send_channel_task(channel, socket)
 end
 
 function handle_packet!(app_server_state, client_netcode_address, data)
-    protocol_id = app_server_state.protocol_id
-    server_side_shared_key = app_server_state.server_side_shared_key
-    app_server_netcode_address = app_server_state.netcode_address
-    room = app_server_state.room
-    used_connect_token_history = app_server_state.used_connect_token_history
-
     packet_size = length(data)
 
     if packet_size == 0
@@ -47,38 +41,38 @@ function handle_packet!(app_server_state, client_netcode_address, data)
 
         io = IOBuffer(data)
 
-        connection_request_packet = try_read(io, ConnectionRequestPacket, protocol_id)
+        connection_request_packet = try_read(io, ConnectionRequestPacket, app_server_state.protocol_id)
         if isnothing(connection_request_packet)
             @info "Packet ignored: `try_read` returned `nothing`"
             return nothing
         end
 
-        private_connect_token = try_decrypt(connection_request_packet, server_side_shared_key)
+        private_connect_token = try_decrypt(connection_request_packet, app_server_state.server_side_shared_key)
         if isnothing(private_connect_token)
             @info "Packet ignored: `try_decrypt` returned `nothing`"
             return nothing
         end
 
-        if !(app_server_netcode_address in private_connect_token.netcode_addresses)
-            @info "Packet ignored: `app_server_netcode_address` not found in `private_connect_token.netcode_addresses`"
+        if !(app_server_state.netcode_address in private_connect_token.netcode_addresses)
+            @info "Packet ignored: `netcode_address` not found in `private_connect_token.netcode_addresses`"
             return nothing
         end
 
-        if is_client_already_connected(room, client_netcode_address, private_connect_token.client_id)
+        if is_client_already_connected(app_server_state.room, client_netcode_address, private_connect_token.client_id)
             @info "Packet ignored: `is_client_already_connected` returned `true`"
             return nothing
         end
 
         connect_token_slot = ConnectTokenSlot(time_ns(), connection_request_packet.encrypted_private_connect_token_data[end - SIZE_OF_HMAC + 1 : end], client_netcode_address)
 
-        if !try_add!(used_connect_token_history, connect_token_slot)
+        if !try_add!(app_server_state.used_connect_token_history, connect_token_slot)
             @info "Packet ignored: connect token already used by another `client_id` or `netcode_address`"
             return nothing
         end
 
         client_slot = ClientSlot(true, client_netcode_address, private_connect_token.client_id)
 
-        is_client_added = try_add!(room, client_slot)
+        is_client_added = try_add!(app_server_state.room, client_slot)
 
         if is_client_added
             @info "Packet accepted"
