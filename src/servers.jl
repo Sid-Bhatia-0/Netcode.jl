@@ -100,9 +100,8 @@ function start_app_server(app_server_state)
 
     @info "Server started listening"
 
-    packet_receive_channel_task = setup_packet_receive_channel_task(packet_receive_channel, socket)
-
-    packet_send_channel_task = setup_packet_send_channel_task(packet_send_channel, socket)
+    setup_packet_receive_channel_task(packet_receive_channel, socket)
+    setup_packet_send_channel_task(packet_send_channel, socket)
 
     target_frame_rate = 60
     total_frames = target_frame_rate * 20
