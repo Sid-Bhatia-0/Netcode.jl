@@ -21,7 +21,13 @@ function setup_packet_send_channel_task(channel, socket)
     return task
 end
 
-function handle_packet!(client_netcode_address, data, app_server_netcode_address, room, used_connect_token_history, protocol_id, key)
+function handle_packet!(app_server_state, client_netcode_address, data)
+    protocol_id = app_server_state.protocol_id
+    key = app_server_state.key
+    app_server_netcode_address = app_server_state.netcode_address
+    room = app_server_state.room
+    used_connect_token_history = app_server_state.used_connect_token_history
+
     packet_size = length(data)
 
     if packet_size == 0
@@ -123,7 +129,7 @@ function start_app_server(app_server_state)
 
             client_netcode_address, data = take!(packet_receive_channel)
 
-            handle_packet!(client_netcode_address, data, app_server_netcode_address, room, used_connect_token_history, protocol_id, key)
+            handle_packet!(app_server_state, client_netcode_address, data)
         end
 
         simulate_update!(game_state, debug_info)
