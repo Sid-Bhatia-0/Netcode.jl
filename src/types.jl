@@ -101,7 +101,7 @@ end
 
 struct AppServerState
     protocol_id::TYPE_OF_PROTOCOL_ID
-    key::Vector{UInt8}
+    server_side_shared_key::Vector{UInt8}
     netcode_address::NetcodeAddress
     socket::Sockets.UDPSocket
     packet_receive_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}

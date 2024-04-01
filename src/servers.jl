@@ -23,7 +23,7 @@ end
 
 function handle_packet!(app_server_state, client_netcode_address, data)
     protocol_id = app_server_state.protocol_id
-    key = app_server_state.key
+    server_side_shared_key = app_server_state.server_side_shared_key
     app_server_netcode_address = app_server_state.netcode_address
     room = app_server_state.room
     used_connect_token_history = app_server_state.used_connect_token_history
@@ -53,7 +53,7 @@ function handle_packet!(app_server_state, client_netcode_address, data)
             return nothing
         end
 
-        private_connect_token = try_decrypt(connection_request_packet, key)
+        private_connect_token = try_decrypt(connection_request_packet, server_side_shared_key)
         if isnothing(private_connect_token)
             @info "Packet ignored: `try_decrypt` returned `nothing`"
             return nothing
@@ -97,7 +97,6 @@ end
 function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, used_connect_token_history_size)
     app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, used_connect_token_history_size)
 
-    key = app_server_state.key
     app_server_netcode_address = app_server_state.netcode_address
     socket = app_server_state.socket
     packet_receive_channel = app_server_state.packet_receive_channel
