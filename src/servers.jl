@@ -97,19 +97,12 @@ end
 function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, used_connect_token_history_size)
     app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, used_connect_token_history_size)
 
-    app_server_netcode_address = app_server_state.netcode_address
-    socket = app_server_state.socket
-    packet_receive_channel = app_server_state.packet_receive_channel
-    packet_send_channel = app_server_state.packet_send_channel
-    room = app_server_state.room
-    used_connect_token_history = app_server_state.used_connect_token_history
-
     @info "Server started listening"
 
-    Sockets.bind(socket, app_server_inet_address.host, app_server_inet_address.port)
+    Sockets.bind(app_server_state.socket, app_server_inet_address.host, app_server_inet_address.port)
 
-    setup_packet_receive_channel_task(packet_receive_channel, socket)
-    setup_packet_send_channel_task(packet_send_channel, socket)
+    setup_packet_receive_channel_task(app_server_state.packet_receive_channel, app_server_state.socket)
+    setup_packet_send_channel_task(app_server_state.packet_send_channel, app_server_state.socket)
 
     target_frame_rate = 60
     total_frames = target_frame_rate * 20
@@ -123,10 +116,10 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
             @show game_state.frame_number
         end
 
-        while !isempty(packet_receive_channel)
+        while !isempty(app_server_state.packet_receive_channel)
             @show game_state.frame_number
 
-            client_netcode_address, data = take!(packet_receive_channel)
+            client_netcode_address, data = take!(app_server_state.packet_receive_channel)
 
             handle_packet!(app_server_state, client_netcode_address, data)
         end
