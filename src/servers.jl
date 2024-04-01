@@ -92,18 +92,16 @@ function start_app_server(app_server_state)
     app_server_netcode_address = app_server_state.netcode_address
     key = app_server_state.key
     protocol_id = app_server_state.protocol_id
-    packet_receive_channel_size = app_server_state.packet_receive_channel_size
-    packet_send_channel_size = app_server_state.packet_send_channel_size
     room = app_server_state.room
     used_connect_token_history = app_server_state.used_connect_token_history
     socket = app_server_state.socket
+    packet_receive_channel = app_server_state.packet_receive_channel
+    packet_send_channel = app_server_state.packet_send_channel
 
     @info "Server started listening"
 
-    packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
     packet_receive_channel_task = setup_packet_receive_channel_task(packet_receive_channel, socket)
 
-    packet_send_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_send_channel_size)
     packet_send_channel_task = setup_packet_send_channel_task(packet_send_channel, socket)
 
     target_frame_rate = 60

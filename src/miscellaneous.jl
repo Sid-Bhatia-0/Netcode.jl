@@ -123,15 +123,19 @@ function AppServerState(inet_address::Union{Sockets.InetAddr{Sockets.IPv4}, Sock
 
     Sockets.bind(socket, inet_address.host, inet_address.port)
 
+    packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
+
+    packet_send_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_send_channel_size)
+
     return AppServerState(
         netcode_address,
         key,
         protocol_id,
-        packet_receive_channel_size,
-        packet_send_channel_size,
         room,
         used_connect_token_history,
         socket,
+        packet_receive_channel,
+        packet_send_channel,
     )
 end
 

@@ -103,9 +103,9 @@ struct AppServerState
     netcode_address::NetcodeAddress
     key::Vector{UInt8}
     protocol_id::TYPE_OF_PROTOCOL_ID
-    packet_receive_channel_size::Int
-    packet_send_channel_size::Int
     room::Vector{ClientSlot}
     used_connect_token_history::Vector{ConnectTokenSlot}
     socket::Sockets.UDPSocket
+    packet_receive_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
+    packet_send_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
 end
