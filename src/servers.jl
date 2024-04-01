@@ -88,16 +88,23 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
     end
 end
 
-function start_app_server(app_server_address, room_size, used_connect_token_history_size, key, protocol_id, packet_receive_channel_size, packet_send_channel_size)
+function start_app_server(app_server_state)
+    app_server_netcode_address = app_server_state.netcode_address
+    room_size = app_server_state.room_size
+    used_connect_token_history_size = app_server_state.used_connect_token_history_size
+    key = app_server_state.key
+    protocol_id = app_server_state.protocol_id
+    packet_receive_channel_size = app_server_state.packet_receive_channel_size
+    packet_send_channel_size = app_server_state.packet_send_channel_size
+
     room = fill(NULL_CLIENT_SLOT, room_size)
 
     used_connect_token_history = fill(NULL_CONNECT_TOKEN_SLOT, used_connect_token_history_size)
 
     socket = Sockets.UDPSocket()
 
-    Sockets.bind(socket, app_server_address.host, app_server_address.port)
-
-    app_server_netcode_address = NetcodeAddress(app_server_address)
+    app_server_inet_address = get_inetaddr(app_server_netcode_address)
+    Sockets.bind(socket, app_server_inet_address.host, app_server_inet_address.port)
 
     @info "Server started listening"
 

@@ -98,3 +98,13 @@ end
 struct CompactUnsignedInteger
     value::TYPE_OF_MAX_SEQUENCE_NUMBER
 end
+
+struct AppServerState
+    netcode_address::NetcodeAddress
+    room_size::Int
+    used_connect_token_history_size::Int
+    key::Vector{UInt8}
+    protocol_id::TYPE_OF_PROTOCOL_ID
+    packet_receive_channel_size::Int
+    packet_send_channel_size::Int
+end
