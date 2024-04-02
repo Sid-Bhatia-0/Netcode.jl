@@ -1,3 +1,10 @@
+DebugInfo() = DebugInfo(Int[], Int[], Int[], Int[], Int[], Int[])
+
+function GameState(target_frame_rate, total_frames)
+    target_ns_per_frame = 1_000_000_000 ÷ target_frame_rate
+    return GameState(time_ns(), 1, target_frame_rate, target_ns_per_frame, total_frames)
+end
+
 function NetcodeAddress(address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}})
     if address isa Sockets.InetAddr{Sockets.IPv4}
         address_type = ADDRESS_TYPE_IPV4
@@ -107,6 +114,54 @@ function ConnectionRequestPacket(connect_token_packet::ConnectTokenPacket)
         connect_token_packet.expire_timestamp,
         connect_token_packet.nonce,
         connect_token_packet.encrypted_private_connect_token_data,
+    )
+end
+
+function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}, packet_receive_channel_size, packet_send_channel_size, room_size, used_connect_token_history_size)
+    @assert length(key) == SIZE_OF_KEY
+
+    netcode_address = NetcodeAddress(inet_address)
+
+    room = fill(NULL_CLIENT_SLOT, room_size)
+
+    used_connect_token_history = fill(NULL_CONNECT_TOKEN_SLOT, used_connect_token_history_size)
+
+    socket = Sockets.UDPSocket()
+
+    packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
+
+    packet_send_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_send_channel_size)
+
+    return AppServerState(
+        protocol_id,
+        key,
+        netcode_address,
+        socket,
+        packet_receive_channel,
+        packet_send_channel,
+        room,
+        used_connect_token_history,
+    )
+end
+
+function ClientState(protocol_id, packet_receive_channel_size, packet_send_channel_size)
+    socket = Sockets.UDPSocket()
+
+    packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
+
+    packet_send_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_send_channel_size)
+
+    state_machine_state = CLIENT_STATE_DISCONNECTED
+
+    connect_token_packet = nothing
+
+    return ClientState(
+        protocol_id,
+        socket,
+        packet_receive_channel,
+        packet_send_channel,
+        state_machine_state,
+        connect_token_packet,
     )
 end
 

@@ -21,7 +21,7 @@ function setup_packet_send_channel_task(channel, socket)
     return task
 end
 
-function handle_packet!(client_netcode_address, data, app_server_netcode_address, room, used_connect_token_history, protocol_id, key)
+function handle_packet!(app_server_state, client_netcode_address, data)
     packet_size = length(data)
 
     if packet_size == 0
@@ -41,38 +41,38 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
 
         io = IOBuffer(data)
 
-        connection_request_packet = try_read(io, ConnectionRequestPacket, protocol_id)
+        connection_request_packet = try_read(io, ConnectionRequestPacket, app_server_state.protocol_id)
         if isnothing(connection_request_packet)
             @info "Packet ignored: `try_read` returned `nothing`"
             return nothing
         end
 
-        private_connect_token = try_decrypt(connection_request_packet, key)
+        private_connect_token = try_decrypt(connection_request_packet, app_server_state.server_side_shared_key)
         if isnothing(private_connect_token)
             @info "Packet ignored: `try_decrypt` returned `nothing`"
             return nothing
         end
 
-        if !(app_server_netcode_address in private_connect_token.netcode_addresses)
-            @info "Packet ignored: `app_server_netcode_address` not found in `private_connect_token.netcode_addresses`"
+        if !(app_server_state.netcode_address in private_connect_token.netcode_addresses)
+            @info "Packet ignored: `netcode_address` not found in `private_connect_token.netcode_addresses`"
             return nothing
         end
 
-        if is_client_already_connected(room, client_netcode_address, private_connect_token.client_id)
+        if is_client_already_connected(app_server_state.room, client_netcode_address, private_connect_token.client_id)
             @info "Packet ignored: `is_client_already_connected` returned `true`"
             return nothing
         end
 
         connect_token_slot = ConnectTokenSlot(time_ns(), connection_request_packet.encrypted_private_connect_token_data[end - SIZE_OF_HMAC + 1 : end], client_netcode_address)
 
-        if !try_add!(used_connect_token_history, connect_token_slot)
+        if !try_add!(app_server_state.used_connect_token_history, connect_token_slot)
             @info "Packet ignored: connect token already used by another `client_id` or `netcode_address`"
             return nothing
         end
 
         client_slot = ClientSlot(true, client_netcode_address, private_connect_token.client_id)
 
-        is_client_added = try_add!(room, client_slot)
+        is_client_added = try_add!(app_server_state.room, client_slot)
 
         if is_client_added
             @info "Packet accepted"
@@ -88,43 +88,30 @@ function handle_packet!(client_netcode_address, data, app_server_netcode_address
     end
 end
 
-function start_app_server(app_server_address, room_size, used_connect_token_history_size, key, protocol_id, packet_receive_channel_size, packet_send_channel_size)
-    room = fill(NULL_CLIENT_SLOT, room_size)
-
-    used_connect_token_history = fill(NULL_CONNECT_TOKEN_SLOT, used_connect_token_history_size)
-
-    socket = Sockets.UDPSocket()
-
-    Sockets.bind(socket, app_server_address.host, app_server_address.port)
-
-    app_server_netcode_address = NetcodeAddress(app_server_address)
+function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, used_connect_token_history_size, target_frame_rate, total_frames)
+    app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, used_connect_token_history_size)
 
     @info "Server started listening"
 
-    packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
-    packet_receive_channel_task = setup_packet_receive_channel_task(packet_receive_channel, socket)
+    Sockets.bind(app_server_state.socket, app_server_inet_address.host, app_server_inet_address.port)
 
-    packet_send_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_send_channel_size)
-    packet_send_channel_task = setup_packet_send_channel_task(packet_send_channel, socket)
+    setup_packet_receive_channel_task(app_server_state.packet_receive_channel, app_server_state.socket)
+    setup_packet_send_channel_task(app_server_state.packet_send_channel, app_server_state.socket)
 
-    target_frame_rate = 60
-    total_frames = target_frame_rate * 20
-    target_ns_per_frame = 1_000_000_000 ÷ target_frame_rate
+    debug_info = DebugInfo()
+    game_state = GameState(target_frame_rate, total_frames)
 
-    debug_info = DebugInfo(Int[], Int[], Int[], Int[], Int[], Int[])
-    game_state = GameState(time_ns(), 1, target_frame_rate, target_ns_per_frame)
-
-    while game_state.frame_number <= total_frames
+    while game_state.frame_number <= game_state.total_frames
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
             @show game_state.frame_number
         end
 
-        while !isempty(packet_receive_channel)
+        while !isempty(app_server_state.packet_receive_channel)
             @show game_state.frame_number
 
-            client_netcode_address, data = take!(packet_receive_channel)
+            client_netcode_address, data = take!(app_server_state.packet_receive_channel)
 
-            handle_packet!(client_netcode_address, data, app_server_netcode_address, room, used_connect_token_history, protocol_id, key)
+            handle_packet!(app_server_state, client_netcode_address, data)
         end
 
         simulate_update!(game_state, debug_info)
@@ -147,37 +134,27 @@ function start_app_server(app_server_address, room_size, used_connect_token_hist
     return nothing
 end
 
-function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, packet_send_channel_size)
+function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, packet_send_channel_size, target_frame_rate, total_frames)
     hashed_password = bytes2hex(SHA.sha3_256(password))
     auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)
 
-    socket = Sockets.UDPSocket()
+    client_state = ClientState(protocol_id, packet_receive_channel_size, packet_send_channel_size)
 
-    packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
-    packet_receive_channel_task = setup_packet_receive_channel_task(packet_receive_channel, socket)
+    setup_packet_receive_channel_task(client_state.packet_receive_channel, client_state.socket)
+    setup_packet_send_channel_task(client_state.packet_send_channel, client_state.socket)
 
-    packet_send_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_send_channel_size)
-    packet_send_channel_task = setup_packet_send_channel_task(packet_send_channel, socket)
+    debug_info = DebugInfo()
+    game_state = GameState(target_frame_rate, total_frames)
 
-    target_frame_rate = 60
-    total_frames = target_frame_rate * 20
-    target_ns_per_frame = 1_000_000_000 ÷ target_frame_rate
-
-    debug_info = DebugInfo(Int[], Int[], Int[], Int[], Int[], Int[])
-    game_state = GameState(time_ns(), 1, target_frame_rate, target_ns_per_frame)
-
-    client_state = CLIENT_STATE_DISCONNECTED
-    connect_token_packet = nothing
-
-    while game_state.frame_number <= total_frames
-        if !isnothing(connect_token_packet) && client_state != CLIENT_STATE_CONNECTED
-            connection_request_packet = ConnectionRequestPacket(connect_token_packet)
+    while game_state.frame_number <= game_state.total_frames
+        if !isnothing(client_state.connect_token_packet) && client_state.state_machine_state != CLIENT_STATE_CONNECTED
+            connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet)
 
             data = get_serialized_data(connection_request_packet)
 
-            app_server_netcode_address = first(connect_token_packet.netcode_addresses)
+            app_server_netcode_address = first(client_state.connect_token_packet.netcode_addresses)
 
-            put!(packet_send_channel, (app_server_netcode_address, data))
+            put!(client_state.packet_send_channel, (app_server_netcode_address, data))
 
             packet_size = length(data)
             packet_prefix = get_packet_prefix(data)
@@ -185,7 +162,7 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
             @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type
 
-            client_state = CLIENT_STATE_CONNECTED
+            client_state.state_machine_state = CLIENT_STATE_CONNECTED
         end
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
@@ -204,6 +181,8 @@ function start_client(auth_server_address, username, password, protocol_id, pack
             connect_token_packet = try_read(IOBuffer(response.body), ConnectTokenPacket, protocol_id)
             if isnothing(connect_token_packet)
                 error("Connect token invalid: `try_read` returned `nothing`")
+            else
+                client_state.connect_token_packet = connect_token_packet
             end
 
             @info "Connect token received"
