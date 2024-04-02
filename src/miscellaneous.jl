@@ -1,3 +1,5 @@
+DebugInfo() = DebugInfo(Int[], Int[], Int[], Int[], Int[], Int[])
+
 function NetcodeAddress(address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}})
     if address isa Sockets.InetAddr{Sockets.IPv4}
         address_type = ADDRESS_TYPE_IPV4
