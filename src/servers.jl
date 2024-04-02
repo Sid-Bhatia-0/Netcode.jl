@@ -146,15 +146,13 @@ function start_client(auth_server_address, username, password, protocol_id, pack
     debug_info = DebugInfo()
     game_state = GameState(target_frame_rate, total_frames)
 
-    connect_token_packet = nothing
-
     while game_state.frame_number <= game_state.total_frames
-        if !isnothing(connect_token_packet) && client_state.state_machine_state != CLIENT_STATE_CONNECTED
-            connection_request_packet = ConnectionRequestPacket(connect_token_packet)
+        if !isnothing(client_state.connect_token_packet) && client_state.state_machine_state != CLIENT_STATE_CONNECTED
+            connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet)
 
             data = get_serialized_data(connection_request_packet)
 
-            app_server_netcode_address = first(connect_token_packet.netcode_addresses)
+            app_server_netcode_address = first(client_state.connect_token_packet.netcode_addresses)
 
             put!(client_state.packet_send_channel, (app_server_netcode_address, data))
 
@@ -183,6 +181,8 @@ function start_client(auth_server_address, username, password, protocol_id, pack
             connect_token_packet = try_read(IOBuffer(response.body), ConnectTokenPacket, protocol_id)
             if isnothing(connect_token_packet)
                 error("Connect token invalid: `try_read` returned `nothing`")
+            else
+                client_state.connect_token_packet = connect_token_packet
             end
 
             @info "Connect token received"

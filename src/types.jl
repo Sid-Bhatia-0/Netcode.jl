@@ -117,4 +117,5 @@ mutable struct ClientState
     packet_receive_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     packet_send_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     state_machine_state::Int
+    connect_token_packet::Union{Nothing, ConnectTokenPacket}
 end

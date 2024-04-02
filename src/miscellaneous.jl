@@ -153,12 +153,15 @@ function ClientState(protocol_id, packet_receive_channel_size, packet_send_chann
 
     state_machine_state = CLIENT_STATE_DISCONNECTED
 
+    connect_token_packet = nothing
+
     return ClientState(
         protocol_id,
         socket,
         packet_receive_channel,
         packet_send_channel,
         state_machine_state,
+        connect_token_packet,
     )
 end
 
