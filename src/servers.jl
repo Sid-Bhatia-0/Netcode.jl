@@ -100,10 +100,9 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
 
     target_frame_rate = 60
     total_frames = target_frame_rate * 20
-    target_ns_per_frame = 1_000_000_000 ÷ target_frame_rate
 
     debug_info = DebugInfo()
-    game_state = GameState(time_ns(), 1, target_frame_rate, target_ns_per_frame)
+    game_state = GameState(target_frame_rate)
 
     while game_state.frame_number <= total_frames
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
@@ -149,10 +148,9 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
     target_frame_rate = 60
     total_frames = target_frame_rate * 20
-    target_ns_per_frame = 1_000_000_000 ÷ target_frame_rate
 
     debug_info = DebugInfo()
-    game_state = GameState(time_ns(), 1, target_frame_rate, target_ns_per_frame)
+    game_state = GameState(target_frame_rate)
 
     connect_token_packet = nothing
 
