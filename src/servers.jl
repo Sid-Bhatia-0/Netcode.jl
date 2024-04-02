@@ -88,7 +88,7 @@ function handle_packet!(app_server_state, client_netcode_address, data)
     end
 end
 
-function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, used_connect_token_history_size)
+function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, used_connect_token_history_size, target_frame_rate, total_frames)
     app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, used_connect_token_history_size)
 
     @info "Server started listening"
@@ -97,9 +97,6 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
 
     setup_packet_receive_channel_task(app_server_state.packet_receive_channel, app_server_state.socket)
     setup_packet_send_channel_task(app_server_state.packet_send_channel, app_server_state.socket)
-
-    target_frame_rate = 60
-    total_frames = target_frame_rate * 20
 
     debug_info = DebugInfo()
     game_state = GameState(target_frame_rate, total_frames)
@@ -137,7 +134,7 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
     return nothing
 end
 
-function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, packet_send_channel_size)
+function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, packet_send_channel_size, target_frame_rate, total_frames)
     hashed_password = bytes2hex(SHA.sha3_256(password))
     auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)
 
@@ -145,9 +142,6 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
     setup_packet_receive_channel_task(client_state.packet_receive_channel, client_state.socket)
     setup_packet_send_channel_task(client_state.packet_send_channel, client_state.socket)
-
-    target_frame_rate = 60
-    total_frames = target_frame_rate * 20
 
     debug_info = DebugInfo()
     game_state = GameState(target_frame_rate, total_frames)
