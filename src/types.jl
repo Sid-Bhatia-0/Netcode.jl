@@ -12,6 +12,7 @@ mutable struct GameState
     frame_number::Int
     target_frame_rate::Int
     target_ns_per_frame::Int
+    total_frames::Int
 end
 
 struct NetcodeAddress
