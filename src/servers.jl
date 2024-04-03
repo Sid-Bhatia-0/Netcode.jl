@@ -147,7 +147,7 @@ function start_client(auth_server_address, username, password, protocol_id, pack
     game_state = GameState(target_frame_rate, total_frames)
 
     while game_state.frame_number <= game_state.total_frames
-        if !isnothing(client_state.connect_token_packet) && client_state.state_machine_state != CLIENT_STATE_CONNECTED
+        if client_state.received_connect_token_packet && client_state.state_machine_state != CLIENT_STATE_CONNECTED
             connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet)
 
             data = get_serialized_data(connection_request_packet)
@@ -182,6 +182,7 @@ function start_client(auth_server_address, username, password, protocol_id, pack
             if isnothing(connect_token_packet)
                 error("Connect token invalid: `try_read` returned `nothing`")
             else
+                client_state.received_connect_token_packet = true
                 client_state.connect_token_packet = connect_token_packet
             end
 
