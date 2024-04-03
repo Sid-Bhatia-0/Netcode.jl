@@ -87,6 +87,8 @@ struct ConnectTokenPacket <: AbstractPacket
     server_to_client_key::Vector{UInt8}
 end
 
+const NULL_CONNECT_TOKEN_PACKET = ConnectTokenPacket(UInt8[], 0, 0, 0, UInt8[], UInt8[], 0, 0, NetcodeAddress[], UInt8[], UInt8[])
+
 struct ConnectionRequestPacket <: AbstractPacket
     packet_prefix::TYPE_OF_PACKET_PREFIX
     netcode_version_info::Vector{UInt8}
@@ -117,5 +119,6 @@ mutable struct ClientState
     packet_receive_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     packet_send_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     state_machine_state::Int
-    connect_token_packet::Union{Nothing, ConnectTokenPacket}
+    received_connect_token_packet::Bool
+    connect_token_packet::ConnectTokenPacket
 end
