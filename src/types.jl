@@ -8,7 +8,7 @@ struct DebugInfo
 end
 
 mutable struct GameState
-    reference_time::Int
+    game_start_time::Int
     frame_number::Int
     target_frame_rate::Int
     target_ns_per_frame::Int

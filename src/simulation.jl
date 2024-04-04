@@ -37,7 +37,7 @@ function simulate_update!(game_state, debug_info)
 end
 
 function sleep_to_achieve_target_frame_rate!(game_state, debug_info)
-    sleep_time_theoretical = max(0, game_state.reference_time + game_state.target_ns_per_frame * game_state.frame_number - get_time())
+    sleep_time_theoretical = max(0, game_state.game_start_time + game_state.target_ns_per_frame * game_state.frame_number - get_time())
     push!(debug_info.sleep_time_theoretical_buffer, sleep_time_theoretical)
 
     sleep_start_time = get_time()
