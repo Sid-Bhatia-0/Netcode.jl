@@ -127,7 +127,7 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
 
         sleep_to_achieve_target_frame_rate!(game_state, debug_info)
 
-        push!(debug_info.frame_end_time_buffer, get_time(game_state.reference_time))
+        push!(debug_info.frame_end_time_buffer, get_time())
         if game_state.frame_number == 1
             push!(debug_info.frame_time_buffer, first(debug_info.frame_end_time_buffer))
         else
@@ -202,7 +202,7 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
         sleep_to_achieve_target_frame_rate!(game_state, debug_info)
 
-        push!(debug_info.frame_end_time_buffer, get_time(game_state.reference_time))
+        push!(debug_info.frame_end_time_buffer, get_time())
         if game_state.frame_number == 1
             push!(debug_info.frame_time_buffer, first(debug_info.frame_end_time_buffer))
         else
