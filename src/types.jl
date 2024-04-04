@@ -1,5 +1,5 @@
 struct DebugInfo
-    frame_end_time_buffer::Vector{TYPE_OF_TIMESTAMP}
+    frame_start_time_buffer::Vector{TYPE_OF_TIMESTAMP}
     frame_time_buffer::Vector{Int}
     update_time_theoretical_buffer::Vector{Int}
     update_time_observed_buffer::Vector{Int}

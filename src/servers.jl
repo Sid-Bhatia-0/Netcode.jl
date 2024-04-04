@@ -108,6 +108,11 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
 
     while game_state.frame_number <= game_state.total_frames
         frame_start_time = time_ns()
+        push!(debug_info.frame_start_time_buffer, frame_start_time)
+
+        if game_state.frame_number > 1
+            push!(debug_info.frame_time_buffer, debug_info.frame_start_time_buffer[end] - debug_info.frame_start_time_buffer[end - 1])
+        end
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
             @show game_state.frame_number
@@ -127,15 +132,11 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
 
         sleep_to_achieve_target_frame_rate!(game_state, debug_info)
 
-        push!(debug_info.frame_end_time_buffer, time_ns())
-        if game_state.frame_number == 1
-            push!(debug_info.frame_time_buffer, first(debug_info.frame_end_time_buffer))
-        else
-            push!(debug_info.frame_time_buffer, debug_info.frame_end_time_buffer[game_state.frame_number] - debug_info.frame_end_time_buffer[game_state.frame_number - 1])
-        end
-
         game_state.frame_number = game_state.frame_number + 1
     end
+
+    game_end_time = time_ns()
+    push!(debug_info.frame_time_buffer, game_end_time - debug_info.frame_start_time_buffer[end])
 
     df_debug_info = create_df_debug_info(debug_info)
     display(DF.describe(df_debug_info, :min, :max, :mean, :std))
@@ -156,6 +157,13 @@ function start_client(auth_server_address, username, password, protocol_id, pack
     game_state = GameState(target_frame_rate, total_frames)
 
     while game_state.frame_number <= game_state.total_frames
+        frame_start_time = time_ns()
+        push!(debug_info.frame_start_time_buffer, frame_start_time)
+
+        if game_state.frame_number > 1
+            push!(debug_info.frame_time_buffer, debug_info.frame_start_time_buffer[end] - debug_info.frame_start_time_buffer[end - 1])
+        end
+
         if client_state.received_connect_token_packet && client_state.state_machine_state != CLIENT_STATE_CONNECTED
             connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet)
 
@@ -202,15 +210,11 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
         sleep_to_achieve_target_frame_rate!(game_state, debug_info)
 
-        push!(debug_info.frame_end_time_buffer, time_ns())
-        if game_state.frame_number == 1
-            push!(debug_info.frame_time_buffer, first(debug_info.frame_end_time_buffer))
-        else
-            push!(debug_info.frame_time_buffer, debug_info.frame_end_time_buffer[game_state.frame_number] - debug_info.frame_end_time_buffer[game_state.frame_number - 1])
-        end
-
         game_state.frame_number = game_state.frame_number + 1
     end
+
+    game_end_time = time_ns()
+    push!(debug_info.frame_time_buffer, game_end_time - debug_info.frame_start_time_buffer[end])
 
     df_debug_info = create_df_debug_info(debug_info)
     display(DF.describe(df_debug_info, :min, :max, :mean, :std))

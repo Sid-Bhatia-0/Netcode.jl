@@ -1,6 +1,5 @@
 function create_df_debug_info(debug_info)
     return DF.DataFrame(
-        # :frame_end_time_buffer => debug_info.frame_end_time_buffer,
         :frame_time => debug_info.frame_time_buffer,
         :update_time_theoretical => debug_info.update_time_theoretical_buffer,
         :update_time_observed => debug_info.update_time_observed_buffer,
