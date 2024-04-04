@@ -143,7 +143,7 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
     return nothing
 end
 
-function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, packet_send_channel_size, target_frame_rate, total_frames)
+function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, packet_send_channel_size, target_frame_rate, total_frames, connect_token_request_frame)
     hashed_password = bytes2hex(SHA.sha3_256(password))
     auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)
 
@@ -178,7 +178,7 @@ function start_client(auth_server_address, username, password, protocol_id, pack
             @show game_state.frame_number
         end
 
-        if game_state.frame_number == 5 * target_frame_rate
+        if game_state.frame_number == connect_token_request_frame
             @info "Connect token requested" game_state.frame_number
 
             response = HTTP.get(auth_server_url)
