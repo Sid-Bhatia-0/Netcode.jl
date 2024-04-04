@@ -220,15 +220,25 @@ function try_add!(used_connect_token_history::Vector{ConnectTokenSlot}, connect_
     return true
 end
 
-function try_add!(room::Vector{ClientSlot}, client_slot::ClientSlot)
+function try_add!(room, slot)
     for i in axes(room, 1)
         if !room[i].is_used
-            room[i] = client_slot
+            room[i] = slot
             return true
         end
     end
 
     return false
+end
+
+function clean_up!(waiting_room::Vector{WaitingClientSlot}, frame_start_time)
+    for (i, waiting_client_slot) in enumerate(waiting_room)
+        if waiting_client_slot.is_used && (waiting_client_slot.last_seen_timestamp + waiting_client_slot.timeout_seconds * 10 ^ 9 <= frame_start_time)
+            waiting_room[i] = Accessors.@set waiting_client_slot.is_used = false
+        end
+    end
+
+    return nothing
 end
 
 get_packet_prefix(packet_data::Vector{UInt8})::TYPE_OF_PACKET_PREFIX = first(packet_data)
