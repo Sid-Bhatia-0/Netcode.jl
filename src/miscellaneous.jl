@@ -117,12 +117,14 @@ function ConnectionRequestPacket(connect_token_packet::ConnectTokenPacket)
     )
 end
 
-function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}, packet_receive_channel_size, packet_send_channel_size, room_size, used_connect_token_history_size)
+function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}, packet_receive_channel_size, packet_send_channel_size, room_size, waiting_room_size, used_connect_token_history_size)
     @assert length(key) == SIZE_OF_KEY
 
     netcode_address = NetcodeAddress(inet_address)
 
     room = fill(NULL_CLIENT_SLOT, room_size)
+
+    waiting_room = fill(NULL_WAITING_CLIENT_SLOT, waiting_room_size)
 
     used_connect_token_history = fill(NULL_CONNECT_TOKEN_SLOT, used_connect_token_history_size)
 
@@ -140,6 +142,7 @@ function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{S
         packet_receive_channel,
         packet_send_channel,
         room,
+        waiting_room,
         used_connect_token_history,
     )
 end
@@ -217,15 +220,25 @@ function try_add!(used_connect_token_history::Vector{ConnectTokenSlot}, connect_
     return true
 end
 
-function try_add!(room::Vector{ClientSlot}, client_slot::ClientSlot)
+function try_add!(room, slot)
     for i in axes(room, 1)
         if !room[i].is_used
-            room[i] = client_slot
+            room[i] = slot
             return true
         end
     end
 
     return false
+end
+
+function clean_up!(waiting_room::Vector{WaitingClientSlot}, frame_start_time)
+    for (i, waiting_client_slot) in enumerate(waiting_room)
+        if waiting_client_slot.is_used && (waiting_client_slot.last_seen_timestamp + waiting_client_slot.timeout_seconds * 10 ^ 9 <= frame_start_time)
+            waiting_room[i] = Accessors.@set waiting_client_slot.is_used = false
+        end
+    end
+
+    return nothing
 end
 
 get_packet_prefix(packet_data::Vector{UInt8})::TYPE_OF_PACKET_PREFIX = first(packet_data)

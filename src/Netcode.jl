@@ -1,5 +1,6 @@
 module Netcode
 
+import Accessors
 import Base64
 import DataFrames as DF
 import GarishPrint as GP

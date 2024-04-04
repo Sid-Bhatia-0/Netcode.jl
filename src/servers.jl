@@ -70,14 +70,19 @@ function handle_packet!(app_server_state, client_netcode_address, data)
             return nothing
         end
 
-        client_slot = ClientSlot(true, client_netcode_address, private_connect_token.client_id)
-
-        is_client_added = try_add!(app_server_state.room, client_slot)
-
-        if is_client_added
-            @info "Packet accepted"
-        else
+        if all(client_slot -> client_slot.is_used, app_server_state.room)
             @info "Packet ignored: no empty client slots available"
+            return nothing
+        end
+
+        waiting_client_slot = WaitingClientSlot(true, client_netcode_address, private_connect_token.client_id, time_ns(), private_connect_token.timeout_seconds, private_connect_token.client_to_server_key, private_connect_token.server_to_client_key)
+
+        is_waiting_client_added = try_add!(app_server_state.waiting_room, waiting_client_slot)
+
+        if is_waiting_client_added
+            @info "Packet accepted: client added to `waiting_room`"
+        else
+            @info "Packet ignored: no empty slots available in `waiting_room`"
             return nothing
         end
 
@@ -88,8 +93,8 @@ function handle_packet!(app_server_state, client_netcode_address, data)
     end
 end
 
-function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, used_connect_token_history_size, target_frame_rate, total_frames)
-    app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, used_connect_token_history_size)
+function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, waiting_room_size, used_connect_token_history_size, target_frame_rate, total_frames)
+    app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, waiting_room_size, used_connect_token_history_size)
 
     @info "Server started listening"
 
@@ -102,9 +107,13 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
     game_state = GameState(target_frame_rate, total_frames)
 
     while game_state.frame_number <= game_state.total_frames
+        frame_start_time = time_ns()
+
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
             @show game_state.frame_number
         end
+
+        clean_up!(app_server_state.waiting_room, frame_start_time)
 
         while !isempty(app_server_state.packet_receive_channel)
             @show game_state.frame_number

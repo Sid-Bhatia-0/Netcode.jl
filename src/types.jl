@@ -32,6 +32,18 @@ end
 
 const NULL_CLIENT_SLOT = ClientSlot(false, NULL_NETCODE_ADDRESS, 0)
 
+struct WaitingClientSlot
+    is_used::Bool
+    netcode_address::NetcodeAddress
+    client_id::TYPE_OF_CLIENT_ID
+    last_seen_timestamp::TYPE_OF_TIMESTAMP
+    timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
+    client_to_server_key::Vector{UInt8}
+    server_to_client_key::Vector{UInt8}
+end
+
+const NULL_WAITING_CLIENT_SLOT = WaitingClientSlot(false, NULL_NETCODE_ADDRESS, 0, 0, 0, UInt8[], UInt8[])
+
 struct ConnectTokenInfo
     netcode_version_info::Vector{UInt8}
     protocol_id::TYPE_OF_PROTOCOL_ID
@@ -110,6 +122,7 @@ struct AppServerState
     packet_receive_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     packet_send_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     room::Vector{ClientSlot}
+    waiting_room::Vector{WaitingClientSlot}
     used_connect_token_history::Vector{ConnectTokenSlot}
 end
 
