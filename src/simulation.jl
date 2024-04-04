@@ -45,35 +45,3 @@ function sleep_to_achieve_target_frame_rate!(game_state, debug_info)
 
     return nothing
 end
-
-function start()
-    target_frame_rate = 60
-    total_frames = target_frame_rate * 2
-    target_ns_per_frame = 1_000_000_000 ÷ target_frame_rate
-
-    debug_info = DebugInfo(Int[], Int[], Int[], Int[], Int[], Int[])
-    game_state = GameState(time_ns(), 1, target_frame_rate, target_ns_per_frame)
-
-    while game_state.frame_number <= total_frames
-        # GLFW.PollEvents()
-
-        simulate_update!(game_state, debug_info)
-
-        sleep_to_achieve_target_frame_rate!(game_state, debug_info)
-
-        push!(debug_info.frame_end_time_buffer, get_time(game_state.reference_time))
-        if game_state.frame_number == 1
-            push!(debug_info.frame_time_buffer, first(debug_info.frame_end_time_buffer))
-        else
-            push!(debug_info.frame_time_buffer, debug_info.frame_end_time_buffer[game_state.frame_number] - debug_info.frame_end_time_buffer[game_state.frame_number - 1])
-        end
-
-        game_state.frame_number = game_state.frame_number + 1
-    end
-
-    df_debug_info = create_df_debug_info(debug_info)
-    display(df_debug_info)
-    display(DF.describe(df_debug_info, :min, :max, :mean, :std))
-
-    return nothing
-end
