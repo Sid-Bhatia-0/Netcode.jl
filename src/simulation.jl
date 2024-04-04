@@ -1,17 +1,3 @@
-function get_time(reference_time)
-    # get time (in units of nanoseconds) since reference_time
-    # places an upper bound on how much time can the program be running until time wraps around giving meaningless values
-    # the conversion to Int will actually throw an error when that happens
-
-    t = time_ns()
-
-    if t >= reference_time
-        return Int(t - reference_time)
-    else
-        return Int(t + (typemax(t) - reference_time))
-    end
-end
-
 get_time() = Int(time_ns())
 
 function create_df_debug_info(debug_info)
