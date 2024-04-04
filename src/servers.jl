@@ -141,7 +141,7 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
     push!(debug_info.frame_time_buffer, game_end_time - debug_info.frame_start_time_buffer[end])
 
     df_debug_info = create_df_debug_info(debug_info)
-    display(DF.describe(df_debug_info, :min, :max, :mean, :std))
+    display(DF.describe(df_debug_info, :min, :q25, :median, :q75, :max, :mean, :std))
 
     return nothing
 end
@@ -221,7 +221,7 @@ function start_client(auth_server_address, username, password, protocol_id, pack
     push!(debug_info.frame_time_buffer, game_end_time - debug_info.frame_start_time_buffer[end])
 
     df_debug_info = create_df_debug_info(debug_info)
-    display(DF.describe(df_debug_info, :min, :max, :mean, :std))
+    display(DF.describe(df_debug_info, :min, :q25, :median, :q75, :max, :mean, :std))
 
     return nothing
 end
