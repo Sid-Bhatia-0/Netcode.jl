@@ -106,6 +106,8 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
     debug_info = DebugInfo()
     game_state = GameState(target_frame_rate, total_frames)
 
+    game_state.game_start_time = time_ns()
+
     while game_state.frame_number <= game_state.total_frames
         frame_start_time = time_ns()
         push!(debug_info.frame_start_time_buffer, frame_start_time)
@@ -155,6 +157,8 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
     debug_info = DebugInfo()
     game_state = GameState(target_frame_rate, total_frames)
+
+    game_state.game_start_time = time_ns()
 
     while game_state.frame_number <= game_state.total_frames
         frame_start_time = time_ns()
