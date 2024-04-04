@@ -25,7 +25,7 @@ function sleep_to_achieve_target_frame_rate!(game_state, debug_info)
     if current_time < expected_frame_end_time
         sleep_time_theoretical = expected_frame_end_time - current_time
     else
-        sleep_time_theoretical = zero(TYPE_OF_TIMESTAMP)
+        sleep_time_theoretical = zero(current_time)
     end
     push!(debug_info.sleep_time_theoretical_buffer, sleep_time_theoretical)
 
