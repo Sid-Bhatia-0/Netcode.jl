@@ -1,5 +1,5 @@
 struct DebugInfo
-    frame_end_time_buffer::Vector{Int}
+    frame_end_time_buffer::Vector{TYPE_OF_TIMESTAMP}
     frame_time_buffer::Vector{Int}
     update_time_theoretical_buffer::Vector{Int}
     update_time_observed_buffer::Vector{Int}
@@ -8,7 +8,7 @@ struct DebugInfo
 end
 
 mutable struct GameState
-    game_start_time::Int
+    game_start_time::TYPE_OF_TIMESTAMP
     frame_number::Int
     target_frame_rate::Int
     target_ns_per_frame::Int
