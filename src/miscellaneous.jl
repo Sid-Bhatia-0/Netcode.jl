@@ -1,4 +1,4 @@
-DebugInfo() = DebugInfo(Int[], Int[], Int[], Int[], Int[], Int[])
+DebugInfo() = DebugInfo(TYPE_OF_TIMESTAMP[], Int[], Int[], Int[], Int[], Int[])
 
 function GameState(target_frame_rate, total_frames)
     target_ns_per_frame = 1_000_000_000 ÷ target_frame_rate
