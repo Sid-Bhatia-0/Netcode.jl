@@ -122,7 +122,9 @@ mutable struct AppServerState
     packet_receive_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     packet_send_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     room::Vector{ClientSlot}
+    num_occupied_room::Int
     waiting_room::Vector{WaitingClientSlot}
+    num_occupied_waiting_room::Int
     used_connect_token_history::Vector{ConnectTokenSlot}
 end
 
