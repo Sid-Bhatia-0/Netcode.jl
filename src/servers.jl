@@ -70,7 +70,7 @@ function handle_packet!(app_server_state, client_netcode_address, data)
             return nothing
         end
 
-        if all(client_slot -> client_slot.is_used, app_server_state.room)
+        if app_server_state.num_occupied_room == length(app_server_state.room)
             @info "Packet ignored: no empty client slots available"
             return nothing
         end
@@ -80,6 +80,7 @@ function handle_packet!(app_server_state, client_netcode_address, data)
         is_waiting_client_added = try_add!(app_server_state.waiting_room, waiting_client_slot)
 
         if is_waiting_client_added
+            app_server_state.num_occupied_waiting_room += 1
             @info "Packet accepted: client added to `waiting_room`"
         else
             @info "Packet ignored: no empty slots available in `waiting_room`"

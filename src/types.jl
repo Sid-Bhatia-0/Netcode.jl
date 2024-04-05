@@ -114,7 +114,7 @@ struct CompactUnsignedInteger
     value::TYPE_OF_MAX_SEQUENCE_NUMBER
 end
 
-struct AppServerState
+mutable struct AppServerState
     protocol_id::TYPE_OF_PROTOCOL_ID
     server_side_shared_key::Vector{UInt8}
     netcode_address::NetcodeAddress
@@ -122,7 +122,9 @@ struct AppServerState
     packet_receive_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     packet_send_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     room::Vector{ClientSlot}
+    num_occupied_room::Int
     waiting_room::Vector{WaitingClientSlot}
+    num_occupied_waiting_room::Int
     used_connect_token_history::Vector{ConnectTokenSlot}
 end
 

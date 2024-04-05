@@ -122,7 +122,11 @@ function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{S
 
     netcode_address = NetcodeAddress(inet_address)
 
+    num_occupied_room = 0
+
     room = fill(NULL_CLIENT_SLOT, room_size)
+
+    num_occupied_waiting_room = 0
 
     waiting_room = fill(NULL_WAITING_CLIENT_SLOT, waiting_room_size)
 
@@ -142,7 +146,9 @@ function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{S
         packet_receive_channel,
         packet_send_channel,
         room,
+        num_occupied_room,
         waiting_room,
+        num_occupied_waiting_room,
         used_connect_token_history,
     )
 end
