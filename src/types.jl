@@ -114,7 +114,7 @@ struct CompactUnsignedInteger
     value::TYPE_OF_MAX_SEQUENCE_NUMBER
 end
 
-struct AppServerState
+mutable struct AppServerState
     protocol_id::TYPE_OF_PROTOCOL_ID
     server_side_shared_key::Vector{UInt8}
     netcode_address::NetcodeAddress
