@@ -206,7 +206,7 @@ function try_add!(used_connect_token_history::Vector{ConnectTokenSlot}, connect_
     last_seen_timestamp_oldest = used_connect_token_history[i_oldest].last_seen_timestamp
 
     for i in axes(used_connect_token_history, 1)
-        if used_connect_token_history[i].hmac == connect_token_slot.hmac
+        if used_connect_token_history[i].hmac_hash == connect_token_slot.hmac_hash
             if used_connect_token_history[i].netcode_address != connect_token_slot.netcode_address
                 return false
             elseif used_connect_token_history[i].last_seen_timestamp < connect_token_slot.last_seen_timestamp
