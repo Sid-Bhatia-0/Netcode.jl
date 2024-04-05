@@ -77,11 +77,11 @@ end
 
 struct ConnectTokenSlot
     last_seen_timestamp::TYPE_OF_TIMESTAMP
-    hmac::Vector{UInt8} # TODO(perf): can store hash of hmac instead of hmac
+    hmac_hash::UInt64
     netcode_address::NetcodeAddress
 end
 
-const NULL_CONNECT_TOKEN_SLOT = ConnectTokenSlot(0, UInt8[], NULL_NETCODE_ADDRESS)
+const NULL_CONNECT_TOKEN_SLOT = ConnectTokenSlot(0, 0, NULL_NETCODE_ADDRESS)
 
 abstract type AbstractPacket end
 

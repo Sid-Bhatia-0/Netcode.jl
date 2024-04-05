@@ -63,7 +63,9 @@ function handle_packet!(app_server_state, client_netcode_address, data)
             return nothing
         end
 
-        connect_token_slot = ConnectTokenSlot(time_ns(), connection_request_packet.encrypted_private_connect_token_data[end - SIZE_OF_HMAC + 1 : end], client_netcode_address)
+        hmac_view = @view connection_request_packet.encrypted_private_connect_token_data[end - SIZE_OF_HMAC + 1 : end]
+        hmac_hash = hash(hmac_view)
+        connect_token_slot = ConnectTokenSlot(time_ns(), hmac_hash, client_netcode_address)
 
         if !try_add!(app_server_state.used_connect_token_history, connect_token_slot)
             @info "Packet ignored: connect token already used by another `client_id` or `netcode_address`"
