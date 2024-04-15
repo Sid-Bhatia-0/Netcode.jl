@@ -31,9 +31,6 @@ const USED_CONNECT_TOKEN_HISTORY_SIZE = ROOM_SIZE
 # TODO: salts must be randomly generated during user registration
 const USER_DATA = DF.DataFrame(username = ["user$(i)" for i in 1:3], salt = ["$(i)" |> SHA.sha3_256 |> bytes2hex for i in 1:3], hashed_salted_hashed_password = ["password$(i)" |> SHA.sha3_256 |> bytes2hex |> (x -> x * ("$(i)" |> SHA.sha3_256 |> bytes2hex)) |> SHA.sha3_256 |> bytes2hex for i in 1:3])
 
-const CLIENT_USERNAME = "user1"
-const CLIENT_PASSWORD = "password1"
-
 const PACKET_RECEIVE_CHANNEL_SIZE = 32
 const PACKET_SEND_CHANNEL_SIZE = 32
 
@@ -47,20 +44,24 @@ if length(ARGS) == 1
         @info "Running as app_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
 
         Netcode.start_app_server(PROTOCOL_ID, SERVER_SIDE_SHARED_KEY, APP_SERVER_ADDRESS, PACKET_RECEIVE_CHANNEL_SIZE, PACKET_SEND_CHANNEL_SIZE, ROOM_SIZE, WAITING_ROOM_SIZE, USED_CONNECT_TOKEN_HISTORY_SIZE, TARGET_FRAME_RATE, TOTAL_FRAMES)
-
     elseif ARGS[1] == "--auth_server"
         @info "Running as auth_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
 
         Netcode.start_auth_server(AUTH_SERVER_ADDRESS, USER_DATA, PROTOCOL_ID, TIMEOUT_SECONDS, CONNECT_TOKEN_EXPIRE_SECONDS, SERVER_SIDE_SHARED_KEY, APP_SERVER_ADDRESSES)
-
-    elseif ARGS[1] == "--client"
+    else
+        error("Unknown command line argument $(ARGS[1])")
+    end
+elseif length(ARGS) == 3
+    if ARGS[1] == "--client"
         @info "Running as client" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
 
-        Netcode.start_client(AUTH_SERVER_ADDRESS, CLIENT_USERNAME, CLIENT_PASSWORD, PROTOCOL_ID, PACKET_RECEIVE_CHANNEL_SIZE, PACKET_SEND_CHANNEL_SIZE, TARGET_FRAME_RATE, TOTAL_FRAMES, CONNECT_TOKEN_REQUEST_FRAME)
+        client_username = ARGS[2]
+        client_password = ARGS[3]
 
+        Netcode.start_client(AUTH_SERVER_ADDRESS, client_username, client_password, PROTOCOL_ID, PACKET_RECEIVE_CHANNEL_SIZE, PACKET_SEND_CHANNEL_SIZE, TARGET_FRAME_RATE, TOTAL_FRAMES, CONNECT_TOKEN_REQUEST_FRAME)
     else
-        error("Invalid command line argument $(ARGS[1])")
+        error("Unknown command line argument $(ARGS[1])")
     end
-elseif length(ARGS) > 1
-    error("This script accepts at most one command line flag")
+else
+    error("Invalid command line argument structure")
 end
