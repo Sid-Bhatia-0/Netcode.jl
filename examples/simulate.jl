@@ -28,8 +28,10 @@ const USED_CONNECT_TOKEN_HISTORY_SIZE = ROOM_SIZE
 
 @assert 1 <= length(APP_SERVER_ADDRESSES) <= Netcode.MAX_NUM_SERVER_ADDRESSES
 
+const NUM_USERS = 8
+
 # TODO: salts must be randomly generated during user registration
-const USER_DATA = DF.DataFrame(username = ["user$(i)" for i in 1:3], salt = ["$(i)" |> SHA.sha3_256 |> bytes2hex for i in 1:3], hashed_salted_hashed_password = ["password$(i)" |> SHA.sha3_256 |> bytes2hex |> (x -> x * ("$(i)" |> SHA.sha3_256 |> bytes2hex)) |> SHA.sha3_256 |> bytes2hex for i in 1:3])
+const USER_DATA = DF.DataFrame(username = ["user$(i)" for i in 1:NUM_USERS], salt = ["$(i)" |> SHA.sha3_256 |> bytes2hex for i in 1:NUM_USERS], hashed_salted_hashed_password = ["password$(i)" |> SHA.sha3_256 |> bytes2hex |> (x -> x * ("$(i)" |> SHA.sha3_256 |> bytes2hex)) |> SHA.sha3_256 |> bytes2hex for i in 1:NUM_USERS])
 
 const PACKET_RECEIVE_CHANNEL_SIZE = 32
 const PACKET_SEND_CHANNEL_SIZE = 32
