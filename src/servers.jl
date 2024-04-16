@@ -178,7 +178,8 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
             app_server_netcode_address = first(client_state.connect_token_packet.netcode_addresses)
 
-            put!(client_state.packet_send_channel, (app_server_netcode_address, data))
+            app_server_inet_address = get_inetaddr(app_server_netcode_address)
+            Sockets.send(client_state.socket, app_server_inet_address.host, app_server_inet_address.port, data)
 
             packet_size = length(data)
             packet_prefix = get_packet_prefix(data)
