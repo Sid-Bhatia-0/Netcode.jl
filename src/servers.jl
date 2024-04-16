@@ -77,7 +77,7 @@ function handle_packet!(app_server_state, client_netcode_address, data)
             return nothing
         end
 
-        waiting_client_slot = WaitingClientSlot(true, client_netcode_address, private_connect_token.client_id, time_ns(), private_connect_token.timeout_seconds, private_connect_token.client_to_server_key, private_connect_token.server_to_client_key)
+        waiting_client_slot = WaitingClientSlot(true, client_netcode_address, private_connect_token.client_id, private_connect_token.user_data, time_ns(), private_connect_token.timeout_seconds, private_connect_token.client_to_server_key, private_connect_token.server_to_client_key)
 
         is_waiting_client_added = try_add!(app_server_state.waiting_room, waiting_client_slot)
 
