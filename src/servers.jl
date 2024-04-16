@@ -96,7 +96,7 @@ function handle_packet!(app_server_state, client_netcode_address, data)
     end
 end
 
-function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, waiting_room_size, used_connect_token_history_size, target_frame_rate, total_frames)
+function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, waiting_room_size, used_connect_token_history_size, target_frame_rate, total_frames, challenge_delay)
     app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, waiting_room_size, used_connect_token_history_size)
 
     @info "Server started listening"
