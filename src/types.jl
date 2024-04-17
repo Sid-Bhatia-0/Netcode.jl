@@ -77,6 +77,18 @@ struct PrivateConnectTokenAssociatedData
     expire_timestamp::TYPE_OF_TIMESTAMP
 end
 
+struct ChallengeTokenInfo
+    challenge_token_sequence_number::TYPE_OF_CHALLENGE_TOKEN_SEQUENCE_NUMBER
+    client_id::TYPE_OF_CLIENT_ID
+    user_data::Vector{UInt8}
+    challenge_token_key::Vector{UInt8}
+end
+
+struct ChallengeTokenMessage
+    client_id::TYPE_OF_CLIENT_ID
+    user_data::Vector{UInt8}
+end
+
 struct ConnectTokenSlot
     last_seen_timestamp::TYPE_OF_TIMESTAMP
     hmac_hash::UInt64

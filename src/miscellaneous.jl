@@ -183,6 +183,13 @@ function ClientState(protocol_id, packet_receive_channel_size, packet_send_chann
     )
 end
 
+function ChallengeTokenMessage(challenge_token_info::ChallengeTokenInfo)
+    return ChallengeTokenMessage(
+        challenge_token_info.client_id,
+        challenge_token_info.user_data,
+    )
+end
+
 function pprint(x)
     GP.pprint(x)
     println()
