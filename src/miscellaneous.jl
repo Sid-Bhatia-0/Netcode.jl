@@ -256,3 +256,5 @@ end
 get_packet_prefix(packet_data::Vector{UInt8})::TYPE_OF_PACKET_PREFIX = first(packet_data)
 
 get_packet_type(packet_prefix::TYPE_OF_PACKET_PREFIX)::TYPE_OF_PACKET_TYPE = packet_prefix & 0xf
+
+generate_packet_prefix(packet_type::TYPE_OF_PACKET_TYPE, packet_sequence_number) = packet_type | convert(TYPE_OF_PACKET_PREFIX, get_serialized_size(CompactUnsignedInteger(packet_sequence_number)))
