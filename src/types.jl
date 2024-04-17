@@ -128,6 +128,8 @@ mutable struct AppServerState
     waiting_room::Vector{WaitingClientSlot}
     num_occupied_waiting_room::Int
     used_connect_token_history::Vector{ConnectTokenSlot}
+    packet_sequence_number::TYPE_OF_MAX_SEQUENCE_NUMBER
+    challenge_token_sequence_number::TYPE_OF_CHALLENGE_TOKEN_SEQUENCE_NUMBER
 end
 
 mutable struct ClientState

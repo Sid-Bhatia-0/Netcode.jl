@@ -138,6 +138,10 @@ function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{S
 
     packet_send_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_send_channel_size)
 
+    packet_sequence_number = 0
+
+    challenge_token_sequence_number = 0
+
     return AppServerState(
         protocol_id,
         key,
@@ -150,6 +154,8 @@ function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{S
         waiting_room,
         num_occupied_waiting_room,
         used_connect_token_history,
+        packet_sequence_number,
+        challenge_token_sequence_number,
     )
 end
 
