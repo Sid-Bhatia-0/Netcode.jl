@@ -117,7 +117,7 @@ function ConnectionRequestPacket(connect_token_packet::ConnectTokenPacket)
     )
 end
 
-function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}, packet_receive_channel_size, packet_send_channel_size, room_size, waiting_room_size, used_connect_token_history_size)
+function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}}, packet_receive_channel_size, room_size, waiting_room_size, used_connect_token_history_size)
     @assert length(key) == SIZE_OF_KEY
 
     netcode_address = NetcodeAddress(inet_address)
@@ -136,8 +136,6 @@ function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{S
 
     packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
 
-    packet_send_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_send_channel_size)
-
     packet_sequence_number = 0
 
     challenge_token_sequence_number = 0
@@ -148,7 +146,6 @@ function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{S
         netcode_address,
         socket,
         packet_receive_channel,
-        packet_send_channel,
         room,
         num_occupied_room,
         waiting_room,
@@ -159,12 +156,10 @@ function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{S
     )
 end
 
-function ClientState(protocol_id, packet_receive_channel_size, packet_send_channel_size)
+function ClientState(protocol_id, packet_receive_channel_size)
     socket = Sockets.UDPSocket()
 
     packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
-
-    packet_send_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_send_channel_size)
 
     state_machine_state = CLIENT_STATE_DISCONNECTED
 
@@ -176,7 +171,6 @@ function ClientState(protocol_id, packet_receive_channel_size, packet_send_chann
         protocol_id,
         socket,
         packet_receive_channel,
-        packet_send_channel,
         state_machine_state,
         received_connect_token_packet,
         connect_token_packet,

@@ -160,7 +160,6 @@ mutable struct AppServerState
     netcode_address::NetcodeAddress
     socket::Sockets.UDPSocket
     packet_receive_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
-    packet_send_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     room::Vector{ClientSlot}
     num_occupied_room::Int
     waiting_room::Vector{WaitingClientSlot}
@@ -174,7 +173,6 @@ mutable struct ClientState
     protocol_id::TYPE_OF_PROTOCOL_ID
     socket::Sockets.UDPSocket
     packet_receive_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
-    packet_send_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     state_machine_state::Int
     received_connect_token_packet::Bool
     connect_token_packet::ConnectTokenPacket

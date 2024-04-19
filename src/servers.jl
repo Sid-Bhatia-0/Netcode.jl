@@ -9,18 +9,6 @@ function setup_packet_receive_channel_task(channel, socket)
     return task
 end
 
-function setup_packet_send_channel_task(channel, socket)
-    task = errormonitor(
-        @async while true
-            netcode_address, data = take!(channel)
-            address = get_inetaddr(netcode_address)
-            Sockets.send(socket, address.host, address.port, data)
-        end
-    )
-
-    return task
-end
-
 function handle_packet!(app_server_state, client_netcode_address, data)
     packet_size = length(data)
 
@@ -96,15 +84,14 @@ function handle_packet!(app_server_state, client_netcode_address, data)
     end
 end
 
-function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, waiting_room_size, used_connect_token_history_size, target_frame_rate, total_frames, challenge_delay, challenge_token_key)
-    app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, waiting_room_size, used_connect_token_history_size)
+function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, room_size, waiting_room_size, used_connect_token_history_size, target_frame_rate, total_frames, challenge_delay, challenge_token_key)
+    app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, room_size, waiting_room_size, used_connect_token_history_size)
 
     @info "Server started listening"
 
     Sockets.bind(app_server_state.socket, app_server_inet_address.host, app_server_inet_address.port)
 
     setup_packet_receive_channel_task(app_server_state.packet_receive_channel, app_server_state.socket)
-    setup_packet_send_channel_task(app_server_state.packet_send_channel, app_server_state.socket)
 
     debug_info = DebugInfo()
     game_state = GameState(target_frame_rate, total_frames)
@@ -183,14 +170,13 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
     return nothing
 end
 
-function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, packet_send_channel_size, target_frame_rate, total_frames, connect_token_request_frame)
+function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, target_frame_rate, total_frames, connect_token_request_frame)
     hashed_password = bytes2hex(SHA.sha3_256(password))
     auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)
 
-    client_state = ClientState(protocol_id, packet_receive_channel_size, packet_send_channel_size)
+    client_state = ClientState(protocol_id, packet_receive_channel_size)
 
     setup_packet_receive_channel_task(client_state.packet_receive_channel, client_state.socket)
-    setup_packet_send_channel_task(client_state.packet_send_channel, client_state.socket)
 
     debug_info = DebugInfo()
     game_state = GameState(target_frame_rate, total_frames)
