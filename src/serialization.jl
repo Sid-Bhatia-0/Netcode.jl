@@ -40,6 +40,8 @@ get_serialized_size(value::PrivateConnectTokenAssociatedData) = get_serialized_s
 
 get_serialized_size(value::ChallengeTokenMessage) = SIZE_OF_CHALLENGE_TOKEN - SIZE_OF_HMAC
 
+get_serialized_size(value::ConnectionPacketAssociatedData) = get_serialized_size_fields(value)
+
 get_serialized_size(packet::AbstractPacket) = get_serialized_size_fields(packet)
 
 get_serialized_size(::ConnectTokenPacket) = SIZE_OF_CONNECT_TOKEN_PACKET
@@ -125,6 +127,8 @@ Base.write(io::IO, private_connect_token::PrivateConnectToken) = write_fields_an
 Base.write(io::IO, private_connect_token_associated_data::PrivateConnectTokenAssociatedData) = write_fields(io, private_connect_token_associated_data)
 
 Base.write(io::IO, challenge_token_message::ChallengeTokenMessage) = write_fields_and_padding(io, challenge_token_message)
+
+Base.write(io::IO, value::ConnectionPacketAssociatedData) = write_fields(io, value)
 
 Base.write(io::IO, packet::AbstractPacket) = write_fields(io, packet)
 
