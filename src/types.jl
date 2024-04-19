@@ -148,6 +148,12 @@ struct ExtendedUnsignedInteger
     value::UInt
 end
 
+struct ConnectionPacket <: AbstractPacket
+    packet_prefix::TYPE_OF_PACKET_PREFIX
+    packet_sequence_number::CompactUnsignedInteger
+    encrypted_data::Vector{UInt8}
+end
+
 mutable struct AppServerState
     protocol_id::TYPE_OF_PROTOCOL_ID
     server_side_shared_key::Vector{UInt8}
