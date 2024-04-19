@@ -190,6 +190,27 @@ function ChallengeTokenMessage(challenge_token_info::ChallengeTokenInfo)
     )
 end
 
+function ConnectionPacketInfo(protocol_id, packet_type, packet_sequence_number, packet_data, server_to_client_key)
+    return ConnectionPacketInfo(
+        NETCODE_VERSION_INFO,
+        protocol_id,
+        packet_type,
+        packet_sequence_number,
+        packet_data,
+        server_to_client_key,
+    )
+end
+
+function ConnectionPacketAssociatedData(connection_packet_info::ConnectionPacketInfo)
+    packet_prefix = generate_packet_prefix(connection_packet_info.packet_type, connection_packet_info.packet_sequence_number)
+
+    return ConnectionPacketAssociatedData(
+        connection_packet_info.netcode_version_info,
+        connection_packet_info.protocol_id,
+        packet_prefix,
+    )
+end
+
 function pprint(x)
     GP.pprint(x)
     println()

@@ -77,6 +77,21 @@ struct PrivateConnectTokenAssociatedData
     expire_timestamp::TYPE_OF_TIMESTAMP
 end
 
+struct ConnectionPacketInfo
+    netcode_version_info::Vector{UInt8}
+    protocol_id::TYPE_OF_PROTOCOL_ID
+    packet_type::TYPE_OF_PACKET_TYPE
+    packet_sequence_number::TYPE_OF_MAX_SEQUENCE_NUMBER
+    packet_data::Vector{UInt8}
+    server_to_client_key::Vector{UInt8}
+end
+
+struct ConnectionPacketAssociatedData
+    netcode_version_info::Vector{UInt8}
+    protocol_id::TYPE_OF_PROTOCOL_ID
+    prefix_byte::TYPE_OF_PACKET_PREFIX
+end
+
 struct ChallengeTokenInfo
     challenge_token_sequence_number::TYPE_OF_CHALLENGE_TOKEN_SEQUENCE_NUMBER
     client_id::TYPE_OF_CLIENT_ID
