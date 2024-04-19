@@ -54,6 +54,8 @@ function get_serialized_size(value::CompactUnsignedInteger)
     end
 end
 
+get_serialized_size(value::ExtendedUnsignedInteger) = value.extended_serialized_size
+
 function get_serialized_data(value)
     data = zeros(UInt8, get_serialized_size(value))
 
@@ -140,6 +142,27 @@ function Base.write(io::IO, value::CompactUnsignedInteger)
     end
 
     @assert n == serialized_size
+
+    return n
+end
+
+function Base.write(io::IO, value::ExtendedUnsignedInteger)
+    n = 0
+
+    x = value.value
+
+    x_serialized_size = get_serialized_size(x)
+    extended_serialized_size = value.extended_serialized_size
+
+    @assert extended_serialized_size >= x_serialized_size
+
+    n += write(io, x)
+
+    for i in 1 : extended_serialized_size - x_serialized_size
+        n += write(io, UInt8(0))
+    end
+
+    @assert n == extended_serialized_size "$(n), $(extended_serialized_size)"
 
     return n
 end

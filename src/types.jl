@@ -128,6 +128,11 @@ struct CompactUnsignedInteger
     value::TYPE_OF_MAX_SEQUENCE_NUMBER
 end
 
+struct ExtendedUnsignedInteger
+    extended_serialized_size::Int
+    value::UInt
+end
+
 mutable struct AppServerState
     protocol_id::TYPE_OF_PROTOCOL_ID
     server_side_shared_key::Vector{UInt8}
