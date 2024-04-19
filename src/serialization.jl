@@ -38,6 +38,10 @@ get_serialized_size(::PrivateConnectToken) = SIZE_OF_ENCRYPTED_PRIVATE_CONNECT_T
 
 get_serialized_size(value::PrivateConnectTokenAssociatedData) = get_serialized_size_fields(value)
 
+get_serialized_size(value::ChallengeTokenMessage) = SIZE_OF_CHALLENGE_TOKEN - SIZE_OF_HMAC
+
+get_serialized_size(value::ConnectionPacketAssociatedData) = get_serialized_size_fields(value)
+
 get_serialized_size(packet::AbstractPacket) = get_serialized_size_fields(packet)
 
 get_serialized_size(::ConnectTokenPacket) = SIZE_OF_CONNECT_TOKEN_PACKET
@@ -51,6 +55,8 @@ function get_serialized_size(value::CompactUnsignedInteger)
         return fld1(num_bits_required, 8)
     end
 end
+
+get_serialized_size(value::ExtendedUnsignedInteger) = value.extended_serialized_size
 
 function get_serialized_data(value)
     data = zeros(UInt8, get_serialized_size(value))
@@ -120,6 +126,10 @@ Base.write(io::IO, private_connect_token::PrivateConnectToken) = write_fields_an
 
 Base.write(io::IO, private_connect_token_associated_data::PrivateConnectTokenAssociatedData) = write_fields(io, private_connect_token_associated_data)
 
+Base.write(io::IO, challenge_token_message::ChallengeTokenMessage) = write_fields_and_padding(io, challenge_token_message)
+
+Base.write(io::IO, value::ConnectionPacketAssociatedData) = write_fields(io, value)
+
 Base.write(io::IO, packet::AbstractPacket) = write_fields(io, packet)
 
 Base.write(io::IO, packet::ConnectTokenPacket) = write_fields_and_padding(io, packet)
@@ -136,6 +146,27 @@ function Base.write(io::IO, value::CompactUnsignedInteger)
     end
 
     @assert n == serialized_size
+
+    return n
+end
+
+function Base.write(io::IO, value::ExtendedUnsignedInteger)
+    n = 0
+
+    x = value.value
+
+    x_serialized_size = get_serialized_size(x)
+    extended_serialized_size = value.extended_serialized_size
+
+    @assert extended_serialized_size >= x_serialized_size
+
+    n += write(io, x)
+
+    for i in 1 : extended_serialized_size - x_serialized_size
+        n += write(io, UInt8(0))
+    end
+
+    @assert n == extended_serialized_size "$(n), $(extended_serialized_size)"
 
     return n
 end

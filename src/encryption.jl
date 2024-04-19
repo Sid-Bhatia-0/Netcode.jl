@@ -46,3 +46,31 @@ function try_decrypt(connection_request_packet::ConnectionRequestPacket, key)
 
     return private_connect_token
 end
+
+function encrypt(challenge_token_info::ChallengeTokenInfo)
+    message = get_serialized_data(ChallengeTokenMessage(challenge_token_info))
+
+    associated_data = UInt8[]
+
+    nonce = get_serialized_data(ExtendedUnsignedInteger(SIZE_OF_EXTENDED_SEQUENCE_NUMBER_NONCE, challenge_token_info.challenge_token_sequence_number))
+
+    key = challenge_token_info.challenge_token_key
+
+    ciphertext = encrypt(message, associated_data, nonce, key)
+
+    return ciphertext
+end
+
+function encrypt(connection_packet_info::ConnectionPacketInfo)
+    message = connection_packet_info.packet_data
+
+    associated_data = get_serialized_data(ConnectionPacketAssociatedData(connection_packet_info))
+
+    nonce = get_serialized_data(ExtendedUnsignedInteger(SIZE_OF_EXTENDED_SEQUENCE_NUMBER_NONCE, connection_packet_info.packet_sequence_number))
+
+    key = connection_packet_info.server_to_client_key
+
+    ciphertext = encrypt(message, associated_data, nonce, key)
+
+    return ciphertext
+end

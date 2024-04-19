@@ -138,6 +138,10 @@ function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{S
 
     packet_send_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_send_channel_size)
 
+    packet_sequence_number = 0
+
+    challenge_token_sequence_number = 0
+
     return AppServerState(
         protocol_id,
         key,
@@ -150,6 +154,8 @@ function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{S
         waiting_room,
         num_occupied_waiting_room,
         used_connect_token_history,
+        packet_sequence_number,
+        challenge_token_sequence_number,
     )
 end
 
@@ -174,6 +180,34 @@ function ClientState(protocol_id, packet_receive_channel_size, packet_send_chann
         state_machine_state,
         received_connect_token_packet,
         connect_token_packet,
+    )
+end
+
+function ChallengeTokenMessage(challenge_token_info::ChallengeTokenInfo)
+    return ChallengeTokenMessage(
+        challenge_token_info.client_id,
+        challenge_token_info.user_data,
+    )
+end
+
+function ConnectionPacketInfo(protocol_id, packet_type, packet_sequence_number, packet_data, server_to_client_key)
+    return ConnectionPacketInfo(
+        NETCODE_VERSION_INFO,
+        protocol_id,
+        packet_type,
+        packet_sequence_number,
+        packet_data,
+        server_to_client_key,
+    )
+end
+
+function ConnectionPacketAssociatedData(connection_packet_info::ConnectionPacketInfo)
+    packet_prefix = generate_packet_prefix(connection_packet_info.packet_type, connection_packet_info.packet_sequence_number)
+
+    return ConnectionPacketAssociatedData(
+        connection_packet_info.netcode_version_info,
+        connection_packet_info.protocol_id,
+        packet_prefix,
     )
 end
 
@@ -250,3 +284,5 @@ end
 get_packet_prefix(packet_data::Vector{UInt8})::TYPE_OF_PACKET_PREFIX = first(packet_data)
 
 get_packet_type(packet_prefix::TYPE_OF_PACKET_PREFIX)::TYPE_OF_PACKET_TYPE = packet_prefix & 0xf
+
+generate_packet_prefix(packet_type::TYPE_OF_PACKET_TYPE, packet_sequence_number) = packet_type | convert(TYPE_OF_PACKET_PREFIX, get_serialized_size(CompactUnsignedInteger(packet_sequence_number)))

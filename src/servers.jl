@@ -77,7 +77,7 @@ function handle_packet!(app_server_state, client_netcode_address, data)
             return nothing
         end
 
-        waiting_client_slot = WaitingClientSlot(true, client_netcode_address, private_connect_token.client_id, time_ns(), private_connect_token.timeout_seconds, private_connect_token.client_to_server_key, private_connect_token.server_to_client_key)
+        waiting_client_slot = WaitingClientSlot(true, client_netcode_address, private_connect_token.client_id, private_connect_token.user_data, time_ns(), 0, private_connect_token.timeout_seconds, private_connect_token.client_to_server_key, private_connect_token.server_to_client_key)
 
         is_waiting_client_added = try_add!(app_server_state.waiting_room, waiting_client_slot)
 
@@ -96,7 +96,7 @@ function handle_packet!(app_server_state, client_netcode_address, data)
     end
 end
 
-function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, waiting_room_size, used_connect_token_history_size, target_frame_rate, total_frames)
+function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, waiting_room_size, used_connect_token_history_size, target_frame_rate, total_frames, challenge_delay, challenge_token_key)
     app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, packet_send_channel_size, room_size, waiting_room_size, used_connect_token_history_size)
 
     @info "Server started listening"
@@ -131,6 +131,40 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
             client_netcode_address, data = take!(app_server_state.packet_receive_channel)
 
             handle_packet!(app_server_state, client_netcode_address, data)
+        end
+
+        for (i, waiting_client_slot) in enumerate(app_server_state.waiting_room)
+            if waiting_client_slot.is_used
+                if (frame_start_time > waiting_client_slot.last_challenge_sent_timestamp) && (frame_start_time - waiting_client_slot.last_challenge_sent_timestamp > challenge_delay)
+                    challenge_token_info = ChallengeTokenInfo(app_server_state.challenge_token_sequence_number, waiting_client_slot.client_id, waiting_client_slot.user_data, challenge_token_key)
+                    app_server_state.challenge_token_sequence_number += 1
+
+                    encrypted_challenge_token_data = encrypt(challenge_token_info)
+
+                    connection_packet_info = ConnectionPacketInfo(app_server_state.protocol_id, PACKET_TYPE_CONNECTION_CHALLENGE_PACKET, app_server_state.packet_sequence_number, encrypted_challenge_token_data, waiting_client_slot.server_to_client_key)
+
+                    encrypted_packet_data = encrypt(connection_packet_info)
+
+                    packet_prefix = generate_packet_prefix(PACKET_TYPE_CONNECTION_CHALLENGE_PACKET, app_server_state.packet_sequence_number)
+
+                    connection_packet = ConnectionPacket(packet_prefix, CompactUnsignedInteger(app_server_state.packet_sequence_number), encrypted_packet_data)
+
+                    data = get_serialized_data(connection_packet)
+
+                    inet_address = get_inetaddr(waiting_client_slot.netcode_address)
+                    Sockets.send(app_server_state.socket, inet_address.host, inet_address.port, data)
+
+                    packet_size = length(data)
+                    packet_prefix = get_packet_prefix(data)
+                    packet_type = get_packet_type(packet_prefix)
+                    packet_sequence_number = app_server_state.packet_sequence_number
+                    @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type packet_sequence_number
+
+                    app_server_state.packet_sequence_number += 1
+
+                    app_server_state.waiting_room[i] = Accessors.@set waiting_client_slot.last_challenge_sent_timestamp = frame_start_time
+                end
+            end
         end
 
         simulate_update!(game_state, debug_info)
@@ -178,7 +212,8 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
             app_server_netcode_address = first(client_state.connect_token_packet.netcode_addresses)
 
-            put!(client_state.packet_send_channel, (app_server_netcode_address, data))
+            app_server_inet_address = get_inetaddr(app_server_netcode_address)
+            Sockets.send(client_state.socket, app_server_inet_address.host, app_server_inet_address.port, data)
 
             packet_size = length(data)
             packet_prefix = get_packet_prefix(data)

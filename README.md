@@ -23,5 +23,5 @@ julia --project=. simulate.jl --app_server
 To start a client instance (run after the authentication and application server instances have started listening):
 
 ```
-julia --project=. simulate.jl --client
+julia --project=. simulate.jl --client user1 password1
 ```

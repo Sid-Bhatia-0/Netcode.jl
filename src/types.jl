@@ -36,13 +36,15 @@ struct WaitingClientSlot
     is_used::Bool
     netcode_address::NetcodeAddress
     client_id::TYPE_OF_CLIENT_ID
+    user_data::Vector{UInt8}
     last_seen_timestamp::TYPE_OF_TIMESTAMP
+    last_challenge_sent_timestamp::TYPE_OF_TIMESTAMP
     timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
 end
 
-const NULL_WAITING_CLIENT_SLOT = WaitingClientSlot(false, NULL_NETCODE_ADDRESS, 0, 0, 0, UInt8[], UInt8[])
+const NULL_WAITING_CLIENT_SLOT = WaitingClientSlot(false, NULL_NETCODE_ADDRESS, 0, UInt8[], 0, 0, 0, UInt8[], UInt8[])
 
 struct ConnectTokenInfo
     netcode_version_info::Vector{UInt8}
@@ -73,6 +75,33 @@ struct PrivateConnectTokenAssociatedData
     netcode_version_info::Vector{UInt8}
     protocol_id::TYPE_OF_PROTOCOL_ID
     expire_timestamp::TYPE_OF_TIMESTAMP
+end
+
+struct ConnectionPacketInfo
+    netcode_version_info::Vector{UInt8}
+    protocol_id::TYPE_OF_PROTOCOL_ID
+    packet_type::TYPE_OF_PACKET_TYPE
+    packet_sequence_number::TYPE_OF_MAX_SEQUENCE_NUMBER
+    packet_data::Vector{UInt8}
+    server_to_client_key::Vector{UInt8}
+end
+
+struct ConnectionPacketAssociatedData
+    netcode_version_info::Vector{UInt8}
+    protocol_id::TYPE_OF_PROTOCOL_ID
+    prefix_byte::TYPE_OF_PACKET_PREFIX
+end
+
+struct ChallengeTokenInfo
+    challenge_token_sequence_number::TYPE_OF_CHALLENGE_TOKEN_SEQUENCE_NUMBER
+    client_id::TYPE_OF_CLIENT_ID
+    user_data::Vector{UInt8}
+    challenge_token_key::Vector{UInt8}
+end
+
+struct ChallengeTokenMessage
+    client_id::TYPE_OF_CLIENT_ID
+    user_data::Vector{UInt8}
 end
 
 struct ConnectTokenSlot
@@ -114,6 +143,17 @@ struct CompactUnsignedInteger
     value::TYPE_OF_MAX_SEQUENCE_NUMBER
 end
 
+struct ExtendedUnsignedInteger
+    extended_serialized_size::Int
+    value::UInt
+end
+
+struct ConnectionPacket <: AbstractPacket
+    packet_prefix::TYPE_OF_PACKET_PREFIX
+    packet_sequence_number::CompactUnsignedInteger
+    encrypted_data::Vector{UInt8}
+end
+
 mutable struct AppServerState
     protocol_id::TYPE_OF_PROTOCOL_ID
     server_side_shared_key::Vector{UInt8}
@@ -126,6 +166,8 @@ mutable struct AppServerState
     waiting_room::Vector{WaitingClientSlot}
     num_occupied_waiting_room::Int
     used_connect_token_history::Vector{ConnectTokenSlot}
+    packet_sequence_number::TYPE_OF_MAX_SEQUENCE_NUMBER
+    challenge_token_sequence_number::TYPE_OF_CHALLENGE_TOKEN_SEQUENCE_NUMBER
 end
 
 mutable struct ClientState
