@@ -110,7 +110,8 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
             @show game_state.frame_number
         end
 
-        clean_up!(app_server_state.waiting_room, frame_start_time)
+        num_cleaned_up_waiting_room = clean_up!(app_server_state.waiting_room, frame_start_time)
+        app_server_state.num_occupied_waiting_room -= num_cleaned_up_waiting_room
 
         while !isempty(app_server_state.packet_receive_channel)
             @show game_state.frame_number
