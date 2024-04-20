@@ -266,13 +266,16 @@ function try_add!(room, slot)
 end
 
 function clean_up!(waiting_room::Vector{WaitingClientSlot}, frame_start_time)
+    num_cleaned_up = 0
+
     for (i, waiting_client_slot) in enumerate(waiting_room)
         if waiting_client_slot.is_used && (waiting_client_slot.last_seen_timestamp + waiting_client_slot.timeout_seconds * 10 ^ 9 <= frame_start_time)
             waiting_room[i] = Accessors.@set waiting_client_slot.is_used = false
+            num_cleaned_up += 1
         end
     end
 
-    return nothing
+    return num_cleaned_up
 end
 
 get_packet_prefix(packet_data::Vector{UInt8})::TYPE_OF_PACKET_PREFIX = first(packet_data)
