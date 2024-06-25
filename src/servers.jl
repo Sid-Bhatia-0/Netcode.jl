@@ -204,6 +204,7 @@ function start_client(auth_server_address, username, password, protocol_id, pack
             @info "Connect token requested" game_state.frame_number
         end
 
+        # process connect token when received
         if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && !isnothing(connect_token_request_response)
             @info "Connect token received" game_state.frame_number
 
