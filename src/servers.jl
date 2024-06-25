@@ -225,12 +225,14 @@ function start_client(auth_server_address, username, password, protocol_id, pack
             @info "Connect token validated" game_state.frame_number
         end
 
+        # invalidate connect token when expired
         if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (frame_start_time >= client_state.connect_token_packet.expire_timestamp)
             @info "Connect token expired" game_state.frame_number
             client_state.connect_token_packet = nothing
             client_state.state_machine_state = CLIENT_STATE_CONNECT_TOKEN_EXPIRED
         end
 
+        # send connection request packet when possible
         if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (frame_start_time > client_state.last_connection_request_packet_sent_timestamp) && (frame_start_time - client_state.last_connection_request_packet_sent_timestamp > connection_request_packet_wait_time)
             connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet)
 
