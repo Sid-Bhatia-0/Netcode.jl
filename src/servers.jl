@@ -184,6 +184,8 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
     game_state.game_start_time = time_ns()
 
+    connect_token_request_response = nothing
+
     while game_state.frame_number <= game_state.total_frames
         frame_start_time = time_ns()
         push!(debug_info.frame_start_time_buffer, frame_start_time)
@@ -198,16 +200,19 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
         # request connect token
         if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && game_state.frame_number == connect_token_request_frame
+            errormonitor(@async connect_token_request_response = HTTP.get(auth_server_url))
             @info "Connect token requested" game_state.frame_number
+        end
 
-            response = HTTP.get(auth_server_url)
+        if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && !isnothing(connect_token_request_response)
+            @info "Connect token received" game_state.frame_number
 
-            if length(response.body) != SIZE_OF_CONNECT_TOKEN_PACKET
+            if length(connect_token_request_response.body) != SIZE_OF_CONNECT_TOKEN_PACKET
                 client_state.state_machine_state = CLIENT_STATE_INVALID_CONNECT_TOKEN
                 error("Connect token invalid: unexpected `packet_size`")
             end
 
-            connect_token_packet = try_read(IOBuffer(response.body), ConnectTokenPacket, protocol_id)
+            connect_token_packet = try_read(IOBuffer(connect_token_request_response.body), ConnectTokenPacket, protocol_id)
             if isnothing(connect_token_packet)
                 client_state.state_machine_state = CLIENT_STATE_INVALID_CONNECT_TOKEN
                 error("Connect token invalid: `try_read` returned `nothing`")
@@ -217,7 +222,7 @@ function start_client(auth_server_address, username, password, protocol_id, pack
                 client_state.state_machine_state = CLIENT_STATE_SENDING_CONNECTION_REQUEST
             end
 
-            @info "Connect token received"
+            @info "Connect token validated" game_state.frame_number
         end
 
         if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (frame_start_time > client_state.last_connection_request_packet_sent_timestamp) && (frame_start_time - client_state.last_connection_request_packet_sent_timestamp > connection_request_packet_wait_time)
