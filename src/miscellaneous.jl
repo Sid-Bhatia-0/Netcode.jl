@@ -163,7 +163,7 @@ function ClientState(protocol_id, packet_receive_channel_size)
 
     state_machine_state = CLIENT_STATE_DISCONNECTED
 
-    connect_token_packet = NULL_CONNECT_TOKEN_PACKET
+    connect_token_packet = nothing
 
     last_connection_request_packet_sent_timestamp = 0
 

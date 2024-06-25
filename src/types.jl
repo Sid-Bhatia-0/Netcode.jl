@@ -174,6 +174,6 @@ mutable struct ClientState
     socket::Sockets.UDPSocket
     packet_receive_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     state_machine_state::Int
-    connect_token_packet::ConnectTokenPacket
+    connect_token_packet::Union{Nothing, ConnectTokenPacket}
     last_connection_request_packet_sent_timestamp::TYPE_OF_TIMESTAMP
 end
