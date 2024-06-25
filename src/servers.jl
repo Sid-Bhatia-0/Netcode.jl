@@ -220,7 +220,7 @@ function start_client(auth_server_address, username, password, protocol_id, pack
             @info "Connect token received"
         end
 
-        if client_state.received_connect_token_packet && client_state.state_machine_state != CLIENT_STATE_CONNECTED
+        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (frame_start_time > client_state.last_connection_request_packet_sent_timestamp) && (frame_start_time - client_state.last_connection_request_packet_sent_timestamp > connection_request_packet_wait_time)
             connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet)
 
             data = get_serialized_data(connection_request_packet)
@@ -236,7 +236,7 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
             @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type
 
-            client_state.state_machine_state = CLIENT_STATE_CONNECTED
+            client_state.last_connection_request_packet_sent_timestamp = frame_start_time
         end
 
         simulate_update!(game_state, debug_info)
