@@ -196,25 +196,7 @@ function start_client(auth_server_address, username, password, protocol_id, pack
             push!(debug_info.frame_time_buffer, debug_info.frame_start_time_buffer[end] - debug_info.frame_start_time_buffer[end - 1])
         end
 
-        if client_state.received_connect_token_packet && client_state.state_machine_state != CLIENT_STATE_CONNECTED
-            connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet)
-
-            data = get_serialized_data(connection_request_packet)
-
-            app_server_netcode_address = first(client_state.connect_token_packet.netcode_addresses)
-
-            app_server_inet_address = get_inetaddr(app_server_netcode_address)
-            Sockets.send(client_state.socket, app_server_inet_address.host, app_server_inet_address.port, data)
-
-            packet_size = length(data)
-            packet_prefix = get_packet_prefix(data)
-            packet_type = get_packet_type(packet_prefix)
-
-            @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type
-
-            client_state.state_machine_state = CLIENT_STATE_CONNECTED
-        end
-
+        # request connect token
         if game_state.frame_number == connect_token_request_frame
             @info "Connect token requested" game_state.frame_number
 
@@ -233,6 +215,25 @@ function start_client(auth_server_address, username, password, protocol_id, pack
             end
 
             @info "Connect token received"
+        end
+
+        if client_state.received_connect_token_packet && client_state.state_machine_state != CLIENT_STATE_CONNECTED
+            connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet)
+
+            data = get_serialized_data(connection_request_packet)
+
+            app_server_netcode_address = first(client_state.connect_token_packet.netcode_addresses)
+
+            app_server_inet_address = get_inetaddr(app_server_netcode_address)
+            Sockets.send(client_state.socket, app_server_inet_address.host, app_server_inet_address.port, data)
+
+            packet_size = length(data)
+            packet_prefix = get_packet_prefix(data)
+            packet_type = get_packet_type(packet_prefix)
+
+            @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type
+
+            client_state.state_machine_state = CLIENT_STATE_CONNECTED
         end
 
         simulate_update!(game_state, debug_info)
