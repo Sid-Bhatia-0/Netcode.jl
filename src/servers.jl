@@ -218,7 +218,6 @@ function start_client(auth_server_address, username, password, protocol_id, pack
                 client_state.state_machine_state = CLIENT_STATE_INVALID_CONNECT_TOKEN
                 error("Connect token invalid: `try_read` returned `nothing`")
             else
-                client_state.received_connect_token_packet = true
                 client_state.connect_token_packet = connect_token_packet
                 client_state.state_machine_state = CLIENT_STATE_SENDING_CONNECTION_REQUEST
             end
