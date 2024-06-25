@@ -197,21 +197,24 @@ function start_client(auth_server_address, username, password, protocol_id, pack
         end
 
         # request connect token
-        if game_state.frame_number == connect_token_request_frame
+        if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && game_state.frame_number == connect_token_request_frame
             @info "Connect token requested" game_state.frame_number
 
             response = HTTP.get(auth_server_url)
 
             if length(response.body) != SIZE_OF_CONNECT_TOKEN_PACKET
+                client_state.state_machine_state == CLIENT_STATE_INVALID_CONNECT_TOKEN
                 error("Connect token invalid: unexpected `packet_size`")
             end
 
             connect_token_packet = try_read(IOBuffer(response.body), ConnectTokenPacket, protocol_id)
             if isnothing(connect_token_packet)
+                client_state.state_machine_state == CLIENT_STATE_INVALID_CONNECT_TOKEN
                 error("Connect token invalid: `try_read` returned `nothing`")
             else
                 client_state.received_connect_token_packet = true
                 client_state.connect_token_packet = connect_token_packet
+                client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST
             end
 
             @info "Connect token received"
