@@ -176,4 +176,5 @@ mutable struct ClientState
     state_machine_state::Int
     received_connect_token_packet::Bool
     connect_token_packet::ConnectTokenPacket
+    last_connection_request_packet_sent_timestamp::TYPE_OF_TIMESTAMP
 end

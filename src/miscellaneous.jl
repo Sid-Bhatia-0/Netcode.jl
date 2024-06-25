@@ -167,6 +167,8 @@ function ClientState(protocol_id, packet_receive_channel_size)
 
     connect_token_packet = NULL_CONNECT_TOKEN_PACKET
 
+    last_connection_request_packet_sent_timestamp = 0
+
     return ClientState(
         protocol_id,
         socket,
@@ -174,6 +176,7 @@ function ClientState(protocol_id, packet_receive_channel_size)
         state_machine_state,
         received_connect_token_packet,
         connect_token_packet,
+        last_connection_request_packet_sent_timestamp,
     )
 end
 
