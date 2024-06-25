@@ -102,12 +102,12 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
         frame_start_time = time_ns()
         push!(debug_info.frame_start_time_buffer, frame_start_time)
 
-        if game_state.frame_number > 1
-            push!(debug_info.frame_time_buffer, debug_info.frame_start_time_buffer[end] - debug_info.frame_start_time_buffer[end - 1])
-        end
-
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
             @show game_state.frame_number
+        end
+
+        if game_state.frame_number > 1
+            push!(debug_info.frame_time_buffer, debug_info.frame_start_time_buffer[end] - debug_info.frame_start_time_buffer[end - 1])
         end
 
         num_cleaned_up_waiting_room = clean_up!(app_server_state.waiting_room, frame_start_time)
@@ -188,6 +188,10 @@ function start_client(auth_server_address, username, password, protocol_id, pack
         frame_start_time = time_ns()
         push!(debug_info.frame_start_time_buffer, frame_start_time)
 
+        if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
+            @show game_state.frame_number
+        end
+
         if game_state.frame_number > 1
             push!(debug_info.frame_time_buffer, debug_info.frame_start_time_buffer[end] - debug_info.frame_start_time_buffer[end - 1])
         end
@@ -209,10 +213,6 @@ function start_client(auth_server_address, username, password, protocol_id, pack
             @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type
 
             client_state.state_machine_state = CLIENT_STATE_CONNECTED
-        end
-
-        if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
-            @show game_state.frame_number
         end
 
         if game_state.frame_number == connect_token_request_frame
