@@ -171,7 +171,7 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
     return nothing
 end
 
-function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, target_frame_rate, total_frames, connect_token_request_frame)
+function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, target_frame_rate, total_frames, connect_token_request_frame, connection_request_packet_wait_time)
     hashed_password = bytes2hex(SHA.sha3_256(password))
     auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)
 
