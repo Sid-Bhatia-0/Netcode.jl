@@ -102,12 +102,12 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
         frame_start_time = time_ns()
         push!(debug_info.frame_start_time_buffer, frame_start_time)
 
-        if game_state.frame_number > 1
-            push!(debug_info.frame_time_buffer, debug_info.frame_start_time_buffer[end] - debug_info.frame_start_time_buffer[end - 1])
-        end
-
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
             @show game_state.frame_number
+        end
+
+        if game_state.frame_number > 1
+            push!(debug_info.frame_time_buffer, debug_info.frame_start_time_buffer[end] - debug_info.frame_start_time_buffer[end - 1])
         end
 
         num_cleaned_up_waiting_room = clean_up!(app_server_state.waiting_room, frame_start_time)
@@ -171,7 +171,7 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
     return nothing
 end
 
-function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, target_frame_rate, total_frames, connect_token_request_frame)
+function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, target_frame_rate, total_frames, connect_token_request_frame, connection_request_packet_wait_time)
     hashed_password = bytes2hex(SHA.sha3_256(password))
     auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)
 
@@ -184,15 +184,56 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
     game_state.game_start_time = time_ns()
 
+    connect_token_request_response = nothing
+
     while game_state.frame_number <= game_state.total_frames
         frame_start_time = time_ns()
         push!(debug_info.frame_start_time_buffer, frame_start_time)
+
+        if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
+            @show game_state.frame_number
+        end
 
         if game_state.frame_number > 1
             push!(debug_info.frame_time_buffer, debug_info.frame_start_time_buffer[end] - debug_info.frame_start_time_buffer[end - 1])
         end
 
-        if client_state.received_connect_token_packet && client_state.state_machine_state != CLIENT_STATE_CONNECTED
+        # request connect token
+        if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && game_state.frame_number == connect_token_request_frame
+            errormonitor(@async connect_token_request_response = HTTP.get(auth_server_url))
+            @info "Connect token requested" game_state.frame_number
+        end
+
+        # process connect token when received
+        if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && !isnothing(connect_token_request_response)
+            @info "Connect token received" game_state.frame_number
+
+            if length(connect_token_request_response.body) != SIZE_OF_CONNECT_TOKEN_PACKET
+                client_state.state_machine_state = CLIENT_STATE_INVALID_CONNECT_TOKEN
+                error("Connect token invalid: unexpected `packet_size`")
+            end
+
+            connect_token_packet = try_read(IOBuffer(connect_token_request_response.body), ConnectTokenPacket, protocol_id)
+            if isnothing(connect_token_packet)
+                client_state.state_machine_state = CLIENT_STATE_INVALID_CONNECT_TOKEN
+                error("Connect token invalid: `try_read` returned `nothing`")
+            else
+                client_state.connect_token_packet = connect_token_packet
+                client_state.state_machine_state = CLIENT_STATE_SENDING_CONNECTION_REQUEST
+            end
+
+            @info "Connect token validated" game_state.frame_number
+        end
+
+        # invalidate connect token when expired
+        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (frame_start_time >= client_state.connect_token_packet.expire_timestamp)
+            @info "Connect token expired" game_state.frame_number
+            client_state.connect_token_packet = nothing
+            client_state.state_machine_state = CLIENT_STATE_CONNECT_TOKEN_EXPIRED
+        end
+
+        # send connection request packet when possible
+        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (frame_start_time > client_state.last_connection_request_packet_sent_timestamp) && (frame_start_time - client_state.last_connection_request_packet_sent_timestamp > connection_request_packet_wait_time)
             connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet)
 
             data = get_serialized_data(connection_request_packet)
@@ -208,31 +249,7 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
             @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type
 
-            client_state.state_machine_state = CLIENT_STATE_CONNECTED
-        end
-
-        if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
-            @show game_state.frame_number
-        end
-
-        if game_state.frame_number == connect_token_request_frame
-            @info "Connect token requested" game_state.frame_number
-
-            response = HTTP.get(auth_server_url)
-
-            if length(response.body) != SIZE_OF_CONNECT_TOKEN_PACKET
-                error("Connect token invalid: unexpected `packet_size`")
-            end
-
-            connect_token_packet = try_read(IOBuffer(response.body), ConnectTokenPacket, protocol_id)
-            if isnothing(connect_token_packet)
-                error("Connect token invalid: `try_read` returned `nothing`")
-            else
-                client_state.received_connect_token_packet = true
-                client_state.connect_token_packet = connect_token_packet
-            end
-
-            @info "Connect token received"
+            client_state.last_connection_request_packet_sent_timestamp = frame_start_time
         end
 
         simulate_update!(game_state, debug_info)

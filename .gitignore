@@ -1,2 +1,4 @@
 *.local.*
 *.secret.*
+src/scratchpad.jl
+Manifest.toml
