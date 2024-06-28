@@ -46,7 +46,9 @@ const CONNECTION_REQUEST_PACKET_WAIT_TIME = 10 ^ 9 ÷ 10
 
 const CHALLENGE_TOKEN_KEY = rand(RNG, UInt8, Netcode.SIZE_OF_KEY)
 
-if length(ARGS) == 1
+if length(ARGS) == 0
+    @info "Empty run"
+elseif length(ARGS) == 1
     if ARGS[1] == "--app_server"
         @info "Running as app_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
 
