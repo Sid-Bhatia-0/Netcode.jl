@@ -84,7 +84,7 @@ function handle_packet!(app_server_state, client_netcode_address, data)
     end
 end
 
-function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, room_size, waiting_room_size, used_connect_token_history_size, target_frame_rate, total_frames, challenge_delay, challenge_token_key)
+function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, room_size, waiting_room_size, used_connect_token_history_size, target_frame_rate, total_frames, challenge_delay, challenge_token_key; save_debug_info_file = nothing)
     app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, room_size, waiting_room_size, used_connect_token_history_size)
 
     @info "Server started listening"
@@ -171,6 +171,10 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
 
     df_debug_info = create_df_debug_info(debug_info)
     display(DF.describe(df_debug_info, :min, :q25, :median, :q75, :max, :mean, :std))
+
+    if !isnothing(save_debug_info_file)
+        Serialization.serialize(save_debug_info_file, debug_info)
+    end
 
     return debug_info
 end
