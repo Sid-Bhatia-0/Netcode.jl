@@ -20,5 +20,6 @@ include("serialization.jl")
 include("encryption.jl")
 include("simulation.jl")
 include("servers.jl")
+include("testing.jl")
 
 end # module
