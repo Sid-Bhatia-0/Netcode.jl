@@ -46,6 +46,8 @@ const CONNECTION_REQUEST_PACKET_WAIT_TIME = 10 ^ 9 ÷ 10
 
 const CHALLENGE_TOKEN_KEY = rand(RNG, UInt8, Netcode.SIZE_OF_KEY)
 
+const CLIENT_SAVE_DEBUG_INFO_FILE = "client_save_debug_info.debug"
+
 if length(ARGS) == 0
     @info "Empty run"
 elseif length(ARGS) == 1
@@ -67,7 +69,7 @@ elseif length(ARGS) == 3
         client_username = ARGS[2]
         client_password = ARGS[3]
 
-        Netcode.start_client(AUTH_SERVER_ADDRESS, client_username, client_password, PROTOCOL_ID, PACKET_RECEIVE_CHANNEL_SIZE, TARGET_FRAME_RATE, TOTAL_FRAMES, CONNECT_TOKEN_REQUEST_FRAME, CONNECTION_REQUEST_PACKET_WAIT_TIME)
+        Netcode.start_client(AUTH_SERVER_ADDRESS, client_username, client_password, PROTOCOL_ID, PACKET_RECEIVE_CHANNEL_SIZE, TARGET_FRAME_RATE, TOTAL_FRAMES, CONNECT_TOKEN_REQUEST_FRAME, CONNECTION_REQUEST_PACKET_WAIT_TIME, save_debug_info_file = CLIENT_SAVE_DEBUG_INFO_FILE)
     else
         error("Unknown command line argument $(ARGS[1])")
     end

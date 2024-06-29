@@ -171,7 +171,7 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
     return nothing
 end
 
-function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, target_frame_rate, total_frames, connect_token_request_frame, connection_request_packet_wait_time)
+function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, target_frame_rate, total_frames, connect_token_request_frame, connection_request_packet_wait_time; save_debug_info_file = nothing)
     hashed_password = bytes2hex(SHA.sha3_256(password))
     auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)
 
@@ -264,6 +264,10 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
     df_debug_info = create_df_debug_info(debug_info)
     display(DF.describe(df_debug_info, :min, :q25, :median, :q75, :max, :mean, :std))
+
+    if !isnothing(save_debug_info_file)
+        Serialization.serialize(save_debug_info_file, debug_info)
+    end
 
     return nothing
 end
