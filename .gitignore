@@ -2,3 +2,4 @@
 *.secret.*
 src/scratchpad.jl
 Manifest.toml
+*.debug
