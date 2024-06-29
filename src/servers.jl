@@ -100,14 +100,18 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
 
     while game_state.frame_number <= game_state.total_frames
         frame_start_time = time_ns()
-        push!(debug_info.frame_start_time_buffer, frame_start_time)
+
+        frame_debug_info = FrameDebugInfo()
+        push!(debug_info.frame_debug_infos, frame_debug_info)
+
+        frame_debug_info.frame_start_time = frame_start_time
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
             @show game_state.frame_number
         end
 
         if game_state.frame_number > 1
-            push!(debug_info.frame_time_buffer, debug_info.frame_start_time_buffer[end] - debug_info.frame_start_time_buffer[end - 1])
+            debug_info.frame_debug_infos[game_state.frame_number - 1].frame_time = frame_start_time - debug_info.frame_debug_infos[game_state.frame_number - 1].frame_start_time
         end
 
         num_cleaned_up_waiting_room = clean_up!(app_server_state.waiting_room, frame_start_time)
@@ -163,7 +167,7 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
     end
 
     game_end_time = time_ns()
-    push!(debug_info.frame_time_buffer, game_end_time - debug_info.frame_start_time_buffer[end])
+    debug_info.frame_debug_infos[end].frame_time = game_end_time - debug_info.frame_debug_infos[end].frame_start_time
 
     df_debug_info = create_df_debug_info(debug_info)
     display(DF.describe(df_debug_info, :min, :q25, :median, :q75, :max, :mean, :std))
@@ -188,14 +192,18 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
     while game_state.frame_number <= game_state.total_frames
         frame_start_time = time_ns()
-        push!(debug_info.frame_start_time_buffer, frame_start_time)
+
+        frame_debug_info = FrameDebugInfo()
+        push!(debug_info.frame_debug_infos, frame_debug_info)
+
+        frame_debug_info.frame_start_time = frame_start_time
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
             @show game_state.frame_number
         end
 
         if game_state.frame_number > 1
-            push!(debug_info.frame_time_buffer, debug_info.frame_start_time_buffer[end] - debug_info.frame_start_time_buffer[end - 1])
+            debug_info.frame_debug_infos[game_state.frame_number - 1].frame_time = frame_start_time - debug_info.frame_debug_infos[game_state.frame_number - 1].frame_start_time
         end
 
         # request connect token
@@ -260,7 +268,7 @@ function start_client(auth_server_address, username, password, protocol_id, pack
     end
 
     game_end_time = time_ns()
-    push!(debug_info.frame_time_buffer, game_end_time - debug_info.frame_start_time_buffer[end])
+    debug_info.frame_debug_infos[end].frame_time = game_end_time - debug_info.frame_debug_infos[end].frame_start_time
 
     df_debug_info = create_df_debug_info(debug_info)
     display(DF.describe(df_debug_info, :min, :q25, :median, :q75, :max, :mean, :std))

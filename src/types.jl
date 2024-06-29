@@ -1,10 +1,14 @@
+mutable struct FrameDebugInfo
+    frame_start_time::TYPE_OF_TIMESTAMP
+    frame_time::Int
+    update_time_theoretical::Int
+    update_time_observed::Int
+    sleep_time_theoretical::Int
+    sleep_time_observed::Int
+end
+
 struct DebugInfo
-    frame_start_time_buffer::Vector{TYPE_OF_TIMESTAMP}
-    frame_time_buffer::Vector{Int}
-    update_time_theoretical_buffer::Vector{Int}
-    update_time_observed_buffer::Vector{Int}
-    sleep_time_theoretical_buffer::Vector{Int}
-    sleep_time_observed_buffer::Vector{Int}
+    frame_debug_infos::Vector{FrameDebugInfo}
 end
 
 mutable struct GameState
