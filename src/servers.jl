@@ -172,7 +172,7 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
     df_debug_info = create_df_debug_info(debug_info)
     display(DF.describe(df_debug_info, :min, :q25, :median, :q75, :max, :mean, :std))
 
-    return nothing
+    return debug_info
 end
 
 function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, target_frame_rate, total_frames, connect_token_request_frame, connection_request_packet_wait_time; save_debug_info_file = nothing)
@@ -277,7 +277,7 @@ function start_client(auth_server_address, username, password, protocol_id, pack
         Serialization.serialize(save_debug_info_file, debug_info)
     end
 
-    return nothing
+    return debug_info
 end
 
 function auth_handler(request, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses)
