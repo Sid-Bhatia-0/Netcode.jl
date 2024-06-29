@@ -305,7 +305,7 @@ uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 version = "2023.1.10"
 
 [[deps.Netcode]]
-deps = ["Accessors", "Base64", "DataFrames", "Debugger", "GarishPrint", "HTTP", "Random", "SHA", "Sockets", "Sodium", "Statistics"]
+deps = ["Accessors", "Base64", "DataFrames", "Debugger", "GarishPrint", "HTTP", "Random", "SHA", "Serialization", "Sockets", "Sodium", "Statistics"]
 path = ".."
 uuid = "4468f03d-0793-4bdc-9bad-85d054e448f3"
 version = "0.0.1"
