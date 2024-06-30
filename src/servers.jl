@@ -135,6 +135,7 @@ function start_app_server(test_config)
             @show game_state.frame_number
 
             client_netcode_address, data = take!(app_server_state.packet_receive_channel)
+            push!(frame_debug_info.packets_recieved, (time_ns(), client_netcode_address, copy(data)))
 
             handle_packet!(app_server_state, client_netcode_address, data)
         end
@@ -165,6 +166,7 @@ function start_app_server(test_config)
                     packet_type = get_packet_type(packet_prefix)
                     packet_sequence_number = app_server_state.packet_sequence_number
                     @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type packet_sequence_number
+                    push!(frame_debug_info.packets_sent, (time_ns(), inet_address, copy(data)))
 
                     app_server_state.packet_sequence_number += 1
 
@@ -284,8 +286,8 @@ function start_client(test_config)
             packet_size = length(data)
             packet_prefix = get_packet_prefix(data)
             packet_type = get_packet_type(packet_prefix)
-
             @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type
+            push!(frame_debug_info.packets_sent, (time_ns(), app_server_inet_address, copy(data)))
 
             client_state.last_connection_request_packet_sent_timestamp = frame_start_time
         end

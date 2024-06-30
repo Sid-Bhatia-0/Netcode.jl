@@ -32,6 +32,8 @@ mutable struct FrameDebugInfo
     update_time_observed::Int
     sleep_time_theoretical::Int
     sleep_time_observed::Int
+    packets_received::Vector{Any}
+    packets_sent::Vector{Any}
 end
 
 struct DebugInfo
