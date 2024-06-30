@@ -8,15 +8,6 @@ function summarize_debug_info(debug_info)
 
     df = create_df_debug_info(debug_info)
 
-    variables = [:frame_time, :update_time_theoretical, :update_time_observed, :sleep_time_theoretical, :sleep_time_observed]
-    metrics = (:min, :q25, :median, :q75, :max, :mean, :std)
-    df_summary = DF.describe(df[!, variables], metrics...)
-    for column in metrics
-        df_summary[!, column] .= Float64.(df_summary[!, column]) ./ 1e6
-    end
-    df_summary[!, :variable] = String.(df_summary[!, :variable]) .* " (ms)"
-    display(df_summary)
-
     num_packets_received = sum(length.(df[!, :packets_received]))
     first_packet_received_frame_number = findfirst(length.(df[!, :packets_received]) .> 0)
     last_packet_received_frame_number = findlast(length.(df[!, :packets_received]) .> 0)
@@ -26,6 +17,15 @@ function summarize_debug_info(debug_info)
     first_packet_sent_frame_number = findfirst(length.(df[!, :packets_sent]) .> 0)
     last_packet_sent_frame_number = findlast(length.(df[!, :packets_sent]) .> 0)
     @show num_packets_sent first_packet_sent_frame_number last_packet_sent_frame_number
+
+    variables = [:frame_time, :update_time_theoretical, :update_time_observed, :sleep_time_theoretical, :sleep_time_observed]
+    metrics = (:min, :q25, :median, :q75, :max, :mean, :std)
+    df_summary = DF.describe(df[!, variables], metrics...)
+    for column in metrics
+        df_summary[!, column] .= Float64.(df_summary[!, column]) ./ 1e6
+    end
+    df_summary[!, :variable] = String.(df_summary[!, :variable]) .* " (ms)"
+    display(df_summary)
 
     return nothing
 end
