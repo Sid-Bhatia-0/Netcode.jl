@@ -3,6 +3,9 @@ function create_df_debug_info(debug_info)
 end
 
 function summarize_debug_info(debug_info)
+    num_frames = length(debug_info.frame_debug_infos)
+    @show num_frames
+
     df = create_df_debug_info(debug_info)
 
     variables = [:frame_time, :update_time_theoretical, :update_time_observed, :sleep_time_theoretical, :sleep_time_observed]
