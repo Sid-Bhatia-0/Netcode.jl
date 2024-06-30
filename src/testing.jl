@@ -78,49 +78,17 @@ end
 function test_app_server()
     test_config = TestConfig()
 
-    return start_app_server(
-        test_config.protocol_id,
-        test_config.server_side_shared_key,
-        test_config.app_server_address,
-        test_config.packet_receive_channel_size,
-        test_config.room_size,
-        test_config.waiting_room_size,
-        test_config.used_connect_token_history_size,
-        test_config.target_frame_rate,
-        test_config.total_frames,
-        test_config.challenge_delay,
-        test_config.challenge_token_key,
-        save_debug_info_file = test_config.server_save_debug_info_file,
-    )
+    return start_app_server(test_config)
 end
 
 function test_auth_server()
     test_config = TestConfig()
 
-    return start_auth_server(
-        test_config.auth_server_address,
-        test_config.user_data,
-        test_config.protocol_id,
-        test_config.timeout_seconds,
-        test_config.connect_token_expire_seconds,
-        test_config.server_side_shared_key,
-        test_config.app_server_addresses,
-    )
+    return start_auth_server(test_config)
 end
 
 function test_client()
     test_config = TestConfig()
 
-    return start_client(
-        test_config.auth_server_address,
-        test_config.client_username,
-        test_config.client_password,
-        test_config.protocol_id,
-        test_config.packet_receive_channel_size,
-        test_config.target_frame_rate,
-        test_config.total_frames,
-        test_config.connect_token_request_frame,
-        test_config.connection_request_packet_wait_time,
-        save_debug_info_file = test_config.client_save_debug_info_file,
-    )
+    return start_client(test_config)
 end

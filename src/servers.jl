@@ -84,7 +84,20 @@ function handle_packet!(app_server_state, client_netcode_address, data)
     end
 end
 
-function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, room_size, waiting_room_size, used_connect_token_history_size, target_frame_rate, total_frames, challenge_delay, challenge_token_key; save_debug_info_file = nothing)
+function start_app_server(test_config)
+    protocol_id = test_config.protocol_id
+    server_side_shared_key = test_config.server_side_shared_key
+    app_server_inet_address = test_config.app_server_address
+    packet_receive_channel_size = test_config.packet_receive_channel_size
+    room_size = test_config.room_size
+    waiting_room_size = test_config.waiting_room_size
+    used_connect_token_history_size = test_config.used_connect_token_history_size
+    target_frame_rate = test_config.target_frame_rate
+    total_frames = test_config.total_frames
+    challenge_delay = test_config.challenge_delay
+    challenge_token_key = test_config.challenge_token_key
+    save_debug_info_file = test_config.server_save_debug_info_file
+
     app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, room_size, waiting_room_size, used_connect_token_history_size)
 
     @info "Server started listening"
@@ -179,7 +192,18 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
     return debug_info
 end
 
-function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, target_frame_rate, total_frames, connect_token_request_frame, connection_request_packet_wait_time; save_debug_info_file = nothing)
+function start_client(test_config)
+    auth_server_address = test_config.auth_server_address
+    username = test_config.client_username
+    password = test_config.client_password
+    protocol_id = test_config.protocol_id
+    packet_receive_channel_size = test_config.packet_receive_channel_size
+    target_frame_rate = test_config.target_frame_rate
+    total_frames = test_config.total_frames
+    connect_token_request_frame = test_config.connect_token_request_frame
+    connection_request_packet_wait_time = test_config.connection_request_packet_wait_time
+    save_debug_info_file = test_config.client_save_debug_info_file
+
     hashed_password = bytes2hex(SHA.sha3_256(password))
     auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)
 
@@ -318,4 +342,14 @@ function auth_handler(request, df_user_data, protocol_id, timeout_seconds, conne
     end
 end
 
-start_auth_server(auth_server_address, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses) = HTTP.serve(request -> auth_handler(request, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses), auth_server_address.host, auth_server_address.port)
+function start_auth_server(test_config)
+    auth_server_address = test_config.auth_server_address
+    df_user_data = test_config.user_data
+    protocol_id = test_config.protocol_id
+    timeout_seconds = test_config.timeout_seconds
+    connect_token_expire_seconds = test_config.connect_token_expire_seconds
+    server_side_shared_key = test_config.server_side_shared_key
+    app_server_addresses = test_config.app_server_addresses
+
+    HTTP.serve(request -> auth_handler(request, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses), auth_server_address.host, auth_server_address.port)
+end
