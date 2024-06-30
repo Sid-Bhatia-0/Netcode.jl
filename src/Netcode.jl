@@ -3,9 +3,11 @@ module Netcode
 import Accessors
 import Base64
 import DataFrames as DF
+import Debugger
 import GarishPrint as GP
 import HTTP
 import Random
+import Serialization
 import SHA
 import Sockets
 import Sodium
@@ -18,5 +20,6 @@ include("serialization.jl")
 include("encryption.jl")
 include("simulation.jl")
 include("servers.jl")
+include("testing.jl")
 
 end # module

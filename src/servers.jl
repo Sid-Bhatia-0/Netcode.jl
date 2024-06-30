@@ -84,7 +84,22 @@ function handle_packet!(app_server_state, client_netcode_address, data)
     end
 end
 
-function start_app_server(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, room_size, waiting_room_size, used_connect_token_history_size, target_frame_rate, total_frames, challenge_delay, challenge_token_key)
+function start_app_server(test_config)
+    empty!(DEBUG_INFO.frame_debug_infos)
+
+    protocol_id = test_config.protocol_id
+    server_side_shared_key = test_config.server_side_shared_key
+    app_server_inet_address = test_config.app_server_address
+    packet_receive_channel_size = test_config.packet_receive_channel_size
+    room_size = test_config.room_size
+    waiting_room_size = test_config.waiting_room_size
+    used_connect_token_history_size = test_config.used_connect_token_history_size
+    target_frame_rate = test_config.target_frame_rate
+    total_frames = test_config.total_frames
+    challenge_delay = test_config.challenge_delay
+    challenge_token_key = test_config.challenge_token_key
+    save_debug_info_file = test_config.server_save_debug_info_file
+
     app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, room_size, waiting_room_size, used_connect_token_history_size)
 
     @info "Server started listening"
@@ -93,21 +108,24 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
 
     setup_packet_receive_channel_task(app_server_state.packet_receive_channel, app_server_state.socket)
 
-    debug_info = DebugInfo()
     game_state = GameState(target_frame_rate, total_frames)
 
     game_state.game_start_time = time_ns()
 
     while game_state.frame_number <= game_state.total_frames
         frame_start_time = time_ns()
-        push!(debug_info.frame_start_time_buffer, frame_start_time)
+
+        frame_debug_info = FrameDebugInfo()
+        push!(DEBUG_INFO.frame_debug_infos, frame_debug_info)
+
+        frame_debug_info.frame_start_time = frame_start_time
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
             @show game_state.frame_number
         end
 
         if game_state.frame_number > 1
-            push!(debug_info.frame_time_buffer, debug_info.frame_start_time_buffer[end] - debug_info.frame_start_time_buffer[end - 1])
+            DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_start_time
         end
 
         num_cleaned_up_waiting_room = clean_up!(app_server_state.waiting_room, frame_start_time)
@@ -155,23 +173,40 @@ function start_app_server(protocol_id, server_side_shared_key, app_server_inet_a
             end
         end
 
-        simulate_update!(game_state, debug_info)
+        simulate_update!(game_state)
 
-        sleep_to_achieve_target_frame_rate!(game_state, debug_info)
+        sleep_to_achieve_target_frame_rate!(game_state)
 
         game_state.frame_number = game_state.frame_number + 1
     end
 
     game_end_time = time_ns()
-    push!(debug_info.frame_time_buffer, game_end_time - debug_info.frame_start_time_buffer[end])
+    DEBUG_INFO.frame_debug_infos[end].frame_time = game_end_time - DEBUG_INFO.frame_debug_infos[end].frame_start_time
 
-    df_debug_info = create_df_debug_info(debug_info)
+    df_debug_info = create_df_debug_info()
     display(DF.describe(df_debug_info, :min, :q25, :median, :q75, :max, :mean, :std))
+
+    if !isnothing(save_debug_info_file)
+        Serialization.serialize(save_debug_info_file, DEBUG_INFO)
+    end
 
     return nothing
 end
 
-function start_client(auth_server_address, username, password, protocol_id, packet_receive_channel_size, target_frame_rate, total_frames, connect_token_request_frame, connection_request_packet_wait_time)
+function start_client(test_config)
+    empty!(DEBUG_INFO.frame_debug_infos)
+
+    auth_server_address = test_config.auth_server_address
+    username = test_config.client_username
+    password = test_config.client_password
+    protocol_id = test_config.protocol_id
+    packet_receive_channel_size = test_config.packet_receive_channel_size
+    target_frame_rate = test_config.target_frame_rate
+    total_frames = test_config.total_frames
+    connect_token_request_frame = test_config.connect_token_request_frame
+    connection_request_packet_wait_time = test_config.connection_request_packet_wait_time
+    save_debug_info_file = test_config.client_save_debug_info_file
+
     hashed_password = bytes2hex(SHA.sha3_256(password))
     auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)
 
@@ -179,7 +214,6 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
     setup_packet_receive_channel_task(client_state.packet_receive_channel, client_state.socket)
 
-    debug_info = DebugInfo()
     game_state = GameState(target_frame_rate, total_frames)
 
     game_state.game_start_time = time_ns()
@@ -188,14 +222,18 @@ function start_client(auth_server_address, username, password, protocol_id, pack
 
     while game_state.frame_number <= game_state.total_frames
         frame_start_time = time_ns()
-        push!(debug_info.frame_start_time_buffer, frame_start_time)
+
+        frame_debug_info = FrameDebugInfo()
+        push!(DEBUG_INFO.frame_debug_infos, frame_debug_info)
+
+        frame_debug_info.frame_start_time = frame_start_time
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
             @show game_state.frame_number
         end
 
         if game_state.frame_number > 1
-            push!(debug_info.frame_time_buffer, debug_info.frame_start_time_buffer[end] - debug_info.frame_start_time_buffer[end - 1])
+            DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_start_time
         end
 
         # request connect token
@@ -252,18 +290,22 @@ function start_client(auth_server_address, username, password, protocol_id, pack
             client_state.last_connection_request_packet_sent_timestamp = frame_start_time
         end
 
-        simulate_update!(game_state, debug_info)
+        simulate_update!(game_state)
 
-        sleep_to_achieve_target_frame_rate!(game_state, debug_info)
+        sleep_to_achieve_target_frame_rate!(game_state)
 
         game_state.frame_number = game_state.frame_number + 1
     end
 
     game_end_time = time_ns()
-    push!(debug_info.frame_time_buffer, game_end_time - debug_info.frame_start_time_buffer[end])
+    DEBUG_INFO.frame_debug_infos[end].frame_time = game_end_time - DEBUG_INFO.frame_debug_infos[end].frame_start_time
 
-    df_debug_info = create_df_debug_info(debug_info)
+    df_debug_info = create_df_debug_info()
     display(DF.describe(df_debug_info, :min, :q25, :median, :q75, :max, :mean, :std))
+
+    if !isnothing(save_debug_info_file)
+        Serialization.serialize(save_debug_info_file, DEBUG_INFO)
+    end
 
     return nothing
 end
@@ -302,4 +344,16 @@ function auth_handler(request, df_user_data, protocol_id, timeout_seconds, conne
     end
 end
 
-start_auth_server(auth_server_address, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses) = HTTP.serve(request -> auth_handler(request, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses), auth_server_address.host, auth_server_address.port)
+function start_auth_server(test_config)
+    empty!(DEBUG_INFO.frame_debug_infos)
+
+    auth_server_address = test_config.auth_server_address
+    df_user_data = test_config.user_data
+    protocol_id = test_config.protocol_id
+    timeout_seconds = test_config.timeout_seconds
+    connect_token_expire_seconds = test_config.connect_token_expire_seconds
+    server_side_shared_key = test_config.server_side_shared_key
+    app_server_addresses = test_config.app_server_addresses
+
+    HTTP.serve(request -> auth_handler(request, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses), auth_server_address.host, auth_server_address.port)
+end

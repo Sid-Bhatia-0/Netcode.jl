@@ -1,71 +1,26 @@
-import DataFrames as DF
 import Netcode
-import Random
-import SHA
-import Sockets
 
-const PROTOCOL_ID = parse(Netcode.TYPE_OF_PROTOCOL_ID, bytes2hex(SHA.sha3_256(cat(Netcode.NETCODE_VERSION_INFO, Vector{UInt8}("Netcode.jl"), dims = 1)))[1:16], base = 16)
+debug_info = nothing
 
-const RNG = Random.MersenneTwister(0)
+test_config = Netcode.TestConfig()
 
-const SERVER_SIDE_SHARED_KEY = rand(RNG, UInt8, Netcode.SIZE_OF_KEY)
+Netcode.pprint(test_config)
 
-const ROOM_SIZE = 3
-
-const WAITING_ROOM_SIZE = ROOM_SIZE
-
-const TIMEOUT_SECONDS = Netcode.TYPE_OF_TIMEOUT_SECONDS(5)
-
-const CONNECT_TOKEN_EXPIRE_SECONDS = 10
-
-const AUTH_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10000)
-
-const APP_SERVER_ADDRESSES = [Sockets.InetAddr(Sockets.localhost, 10001)]
-
-const APP_SERVER_ADDRESS = APP_SERVER_ADDRESSES[1]
-
-const USED_CONNECT_TOKEN_HISTORY_SIZE = ROOM_SIZE
-
-@assert 1 <= length(APP_SERVER_ADDRESSES) <= Netcode.MAX_NUM_SERVER_ADDRESSES
-
-const NUM_USERS = 8
-
-# TODO: salts must be randomly generated during user registration
-const USER_DATA = DF.DataFrame(username = ["user$(i)" for i in 1:NUM_USERS], salt = ["$(i)" |> SHA.sha3_256 |> bytes2hex for i in 1:NUM_USERS], hashed_salted_hashed_password = ["password$(i)" |> SHA.sha3_256 |> bytes2hex |> (x -> x * ("$(i)" |> SHA.sha3_256 |> bytes2hex)) |> SHA.sha3_256 |> bytes2hex for i in 1:NUM_USERS])
-
-const PACKET_RECEIVE_CHANNEL_SIZE = 32
-
-const TARGET_FRAME_RATE = 60
-const TOTAL_FRAMES = TARGET_FRAME_RATE * 30
-
-const CONNECT_TOKEN_REQUEST_FRAME = 5 * TARGET_FRAME_RATE
-
-const CHALLENGE_DELAY = 10 ^ 9 ÷ 10
-
-const CONNECTION_REQUEST_PACKET_WAIT_TIME = 10 ^ 9 ÷ 10
-
-const CHALLENGE_TOKEN_KEY = rand(RNG, UInt8, Netcode.SIZE_OF_KEY)
-
-if length(ARGS) == 1
+if length(ARGS) == 0
+    @info "Empty run"
+elseif length(ARGS) == 1
     if ARGS[1] == "--app_server"
-        @info "Running as app_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
+        @info "Running as app_server" test_config.app_server_address test_config.auth_server_address
 
-        Netcode.start_app_server(PROTOCOL_ID, SERVER_SIDE_SHARED_KEY, APP_SERVER_ADDRESS, PACKET_RECEIVE_CHANNEL_SIZE, ROOM_SIZE, WAITING_ROOM_SIZE, USED_CONNECT_TOKEN_HISTORY_SIZE, TARGET_FRAME_RATE, TOTAL_FRAMES, CHALLENGE_DELAY, CHALLENGE_TOKEN_KEY)
+        debug_info = Netcode.test_app_server(test_config)
     elseif ARGS[1] == "--auth_server"
-        @info "Running as auth_server" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
+        @info "Running as auth_server" test_config.app_server_address test_config.auth_server_address
 
-        Netcode.start_auth_server(AUTH_SERVER_ADDRESS, USER_DATA, PROTOCOL_ID, TIMEOUT_SECONDS, CONNECT_TOKEN_EXPIRE_SECONDS, SERVER_SIDE_SHARED_KEY, APP_SERVER_ADDRESSES)
-    else
-        error("Unknown command line argument $(ARGS[1])")
-    end
-elseif length(ARGS) == 3
-    if ARGS[1] == "--client"
-        @info "Running as client" APP_SERVER_ADDRESS AUTH_SERVER_ADDRESS
+        debug_info = Netcode.test_auth_server(test_config)
+    elseif ARGS[1] == "--client"
+        @info "Running as client" test_config.app_server_address test_config.auth_server_address
 
-        client_username = ARGS[2]
-        client_password = ARGS[3]
-
-        Netcode.start_client(AUTH_SERVER_ADDRESS, client_username, client_password, PROTOCOL_ID, PACKET_RECEIVE_CHANNEL_SIZE, TARGET_FRAME_RATE, TOTAL_FRAMES, CONNECT_TOKEN_REQUEST_FRAME, CONNECTION_REQUEST_PACKET_WAIT_TIME)
+        debug_info = Netcode.test_client(test_config)
     else
         error("Unknown command line argument $(ARGS[1])")
     end

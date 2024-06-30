@@ -1,11 +1,44 @@
-struct DebugInfo
-    frame_start_time_buffer::Vector{TYPE_OF_TIMESTAMP}
-    frame_time_buffer::Vector{Int}
-    update_time_theoretical_buffer::Vector{Int}
-    update_time_observed_buffer::Vector{Int}
-    sleep_time_theoretical_buffer::Vector{Int}
-    sleep_time_observed_buffer::Vector{Int}
+struct TestConfig
+    protocol_id::TYPE_OF_PROTOCOL_ID
+    rng::Random.AbstractRNG
+    server_side_shared_key::Vector{UInt8}
+    room_size::Int
+    waiting_room_size::Int
+    timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
+    connect_token_expire_seconds::Int
+    auth_server_address::Sockets.InetAddr
+    app_server_addresses::Vector{Sockets.InetAddr}
+    app_server_address::Sockets.InetAddr
+    used_connect_token_history_size::Int
+    num_users::Int
+    user_data::DF.DataFrame
+    packet_receive_channel_size::Int
+    target_frame_rate::Int
+    total_frames::Int
+    connect_token_request_frame::Int
+    challenge_delay::Int
+    connection_request_packet_wait_time::Int
+    challenge_token_key::Vector{UInt8}
+    client_save_debug_info_file::Union{Nothing, String}
+    server_save_debug_info_file::Union{Nothing, String}
+    client_username::String
+    client_password::String
 end
+
+mutable struct FrameDebugInfo
+    frame_start_time::TYPE_OF_TIMESTAMP
+    frame_time::Int
+    update_time_theoretical::Int
+    update_time_observed::Int
+    sleep_time_theoretical::Int
+    sleep_time_observed::Int
+end
+
+struct DebugInfo
+    frame_debug_infos::Vector{FrameDebugInfo}
+end
+
+const DEBUG_INFO = DebugInfo(FrameDebugInfo[])
 
 mutable struct GameState
     game_start_time::TYPE_OF_TIMESTAMP
