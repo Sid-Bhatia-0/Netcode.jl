@@ -1,13 +1,7 @@
 function create_df_debug_info()
     frame_debug_infos = DEBUG_INFO.frame_debug_infos
 
-    return DF.DataFrame(
-        :frame_time => getfield.(frame_debug_infos, :frame_time),
-        :update_time_theoretical => getfield.(frame_debug_infos, :update_time_theoretical),
-        :update_time_observed => getfield.(frame_debug_infos, :update_time_observed),
-        :sleep_time_theoretical => getfield.(frame_debug_infos, :sleep_time_theoretical),
-        :sleep_time_observed => getfield.(frame_debug_infos, :sleep_time_observed),
-    )
+    return DF.DataFrame([x => getfield.(Netcode.DEBUG_INFO.frame_debug_infos, x) for x in fieldnames(Netcode.FrameDebugInfo)]...)
 end
 
 function simulate_update!(game_state)
