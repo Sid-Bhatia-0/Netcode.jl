@@ -1,7 +1,5 @@
-function create_df_debug_info()
-    frame_debug_infos = DEBUG_INFO.frame_debug_infos
-
-    return DF.DataFrame([x => getfield.(Netcode.DEBUG_INFO.frame_debug_infos, x) for x in fieldnames(Netcode.FrameDebugInfo)]...)
+function create_df_debug_info(debug_info)
+    return DF.DataFrame([x => getfield.(debug_info.frame_debug_infos, x) for x in fieldnames(Netcode.FrameDebugInfo)]...)
 end
 
 function simulate_update!(game_state)

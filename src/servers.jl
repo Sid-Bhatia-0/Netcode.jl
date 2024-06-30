@@ -186,7 +186,7 @@ function start_app_server(test_config)
     game_end_time = time_ns()
     DEBUG_INFO.frame_debug_infos[end].frame_time = game_end_time - DEBUG_INFO.frame_debug_infos[end].frame_start_time
 
-    df_debug_info = create_df_debug_info()
+    df_debug_info = create_df_debug_info(DEBUG_INFO)
     display(DF.describe(df_debug_info, :min, :q25, :median, :q75, :max, :mean, :std))
 
     if !isnothing(save_debug_info_file)
@@ -304,7 +304,7 @@ function start_client(test_config)
     game_end_time = time_ns()
     DEBUG_INFO.frame_debug_infos[end].frame_time = game_end_time - DEBUG_INFO.frame_debug_infos[end].frame_start_time
 
-    df_debug_info = create_df_debug_info()
+    df_debug_info = create_df_debug_info(DEBUG_INFO)
     display(DF.describe(df_debug_info, :min, :q25, :median, :q75, :max, :mean, :std))
 
     if !isnothing(save_debug_info_file)
