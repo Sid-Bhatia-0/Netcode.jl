@@ -38,6 +38,8 @@ struct DebugInfo
     frame_debug_infos::Vector{FrameDebugInfo}
 end
 
+const DEBUG_INFO = DebugInfo(FrameDebugInfo[])
+
 mutable struct GameState
     game_start_time::TYPE_OF_TIMESTAMP
     frame_number::Int

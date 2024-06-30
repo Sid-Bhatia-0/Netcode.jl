@@ -85,6 +85,8 @@ function handle_packet!(app_server_state, client_netcode_address, data)
 end
 
 function start_app_server(test_config)
+    empty!(DEBUG_INFO.frame_debug_infos)
+
     protocol_id = test_config.protocol_id
     server_side_shared_key = test_config.server_side_shared_key
     app_server_inet_address = test_config.app_server_address
@@ -106,7 +108,6 @@ function start_app_server(test_config)
 
     setup_packet_receive_channel_task(app_server_state.packet_receive_channel, app_server_state.socket)
 
-    debug_info = DebugInfo()
     game_state = GameState(target_frame_rate, total_frames)
 
     game_state.game_start_time = time_ns()
@@ -115,7 +116,7 @@ function start_app_server(test_config)
         frame_start_time = time_ns()
 
         frame_debug_info = FrameDebugInfo()
-        push!(debug_info.frame_debug_infos, frame_debug_info)
+        push!(DEBUG_INFO.frame_debug_infos, frame_debug_info)
 
         frame_debug_info.frame_start_time = frame_start_time
 
@@ -124,7 +125,7 @@ function start_app_server(test_config)
         end
 
         if game_state.frame_number > 1
-            debug_info.frame_debug_infos[game_state.frame_number - 1].frame_time = frame_start_time - debug_info.frame_debug_infos[game_state.frame_number - 1].frame_start_time
+            DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_start_time
         end
 
         num_cleaned_up_waiting_room = clean_up!(app_server_state.waiting_room, frame_start_time)
@@ -172,27 +173,29 @@ function start_app_server(test_config)
             end
         end
 
-        simulate_update!(game_state, debug_info)
+        simulate_update!(game_state)
 
-        sleep_to_achieve_target_frame_rate!(game_state, debug_info)
+        sleep_to_achieve_target_frame_rate!(game_state)
 
         game_state.frame_number = game_state.frame_number + 1
     end
 
     game_end_time = time_ns()
-    debug_info.frame_debug_infos[end].frame_time = game_end_time - debug_info.frame_debug_infos[end].frame_start_time
+    DEBUG_INFO.frame_debug_infos[end].frame_time = game_end_time - DEBUG_INFO.frame_debug_infos[end].frame_start_time
 
-    df_debug_info = create_df_debug_info(debug_info)
+    df_debug_info = create_df_debug_info()
     display(DF.describe(df_debug_info, :min, :q25, :median, :q75, :max, :mean, :std))
 
     if !isnothing(save_debug_info_file)
-        Serialization.serialize(save_debug_info_file, debug_info)
+        Serialization.serialize(save_debug_info_file, DEBUG_INFO)
     end
 
-    return debug_info
+    return nothing
 end
 
 function start_client(test_config)
+    empty!(DEBUG_INFO.frame_debug_infos)
+
     auth_server_address = test_config.auth_server_address
     username = test_config.client_username
     password = test_config.client_password
@@ -211,7 +214,6 @@ function start_client(test_config)
 
     setup_packet_receive_channel_task(client_state.packet_receive_channel, client_state.socket)
 
-    debug_info = DebugInfo()
     game_state = GameState(target_frame_rate, total_frames)
 
     game_state.game_start_time = time_ns()
@@ -222,7 +224,7 @@ function start_client(test_config)
         frame_start_time = time_ns()
 
         frame_debug_info = FrameDebugInfo()
-        push!(debug_info.frame_debug_infos, frame_debug_info)
+        push!(DEBUG_INFO.frame_debug_infos, frame_debug_info)
 
         frame_debug_info.frame_start_time = frame_start_time
 
@@ -231,7 +233,7 @@ function start_client(test_config)
         end
 
         if game_state.frame_number > 1
-            debug_info.frame_debug_infos[game_state.frame_number - 1].frame_time = frame_start_time - debug_info.frame_debug_infos[game_state.frame_number - 1].frame_start_time
+            DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_start_time
         end
 
         # request connect token
@@ -288,24 +290,24 @@ function start_client(test_config)
             client_state.last_connection_request_packet_sent_timestamp = frame_start_time
         end
 
-        simulate_update!(game_state, debug_info)
+        simulate_update!(game_state)
 
-        sleep_to_achieve_target_frame_rate!(game_state, debug_info)
+        sleep_to_achieve_target_frame_rate!(game_state)
 
         game_state.frame_number = game_state.frame_number + 1
     end
 
     game_end_time = time_ns()
-    debug_info.frame_debug_infos[end].frame_time = game_end_time - debug_info.frame_debug_infos[end].frame_start_time
+    DEBUG_INFO.frame_debug_infos[end].frame_time = game_end_time - DEBUG_INFO.frame_debug_infos[end].frame_start_time
 
-    df_debug_info = create_df_debug_info(debug_info)
+    df_debug_info = create_df_debug_info()
     display(DF.describe(df_debug_info, :min, :q25, :median, :q75, :max, :mean, :std))
 
     if !isnothing(save_debug_info_file)
-        Serialization.serialize(save_debug_info_file, debug_info)
+        Serialization.serialize(save_debug_info_file, DEBUG_INFO)
     end
 
-    return debug_info
+    return nothing
 end
 
 function auth_handler(request, df_user_data, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses)
@@ -343,6 +345,8 @@ function auth_handler(request, df_user_data, protocol_id, timeout_seconds, conne
 end
 
 function start_auth_server(test_config)
+    empty!(DEBUG_INFO.frame_debug_infos)
+
     auth_server_address = test_config.auth_server_address
     df_user_data = test_config.user_data
     protocol_id = test_config.protocol_id

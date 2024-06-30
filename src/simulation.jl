@@ -1,5 +1,5 @@
-function create_df_debug_info(debug_info)
-    frame_debug_infos = debug_info.frame_debug_infos
+function create_df_debug_info()
+    frame_debug_infos = DEBUG_INFO.frame_debug_infos
 
     return DF.DataFrame(
         :frame_time => getfield.(frame_debug_infos, :frame_time),
@@ -10,8 +10,8 @@ function create_df_debug_info(debug_info)
     )
 end
 
-function simulate_update!(game_state, debug_info)
-    frame_debug_info = debug_info.frame_debug_infos[game_state.frame_number]
+function simulate_update!(game_state)
+    frame_debug_info = DEBUG_INFO.frame_debug_infos[game_state.frame_number]
     update_time_theoretical = 2_000_000
     frame_debug_info.update_time_theoretical = update_time_theoretical
     update_start_time = time_ns()
@@ -22,8 +22,8 @@ function simulate_update!(game_state, debug_info)
     return nothing
 end
 
-function sleep_to_achieve_target_frame_rate!(game_state, debug_info)
-    frame_debug_info = debug_info.frame_debug_infos[game_state.frame_number]
+function sleep_to_achieve_target_frame_rate!(game_state)
+    frame_debug_info = DEBUG_INFO.frame_debug_infos[game_state.frame_number]
 
     expected_frame_end_time = game_state.game_start_time + game_state.target_ns_per_frame * game_state.frame_number
     current_time = time_ns()

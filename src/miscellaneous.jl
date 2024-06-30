@@ -1,5 +1,3 @@
-DebugInfo() = DebugInfo(FrameDebugInfo[])
-
 FrameDebugInfo() = FrameDebugInfo(0, 0, 0, 0, 0, 0)
 
 function GameState(target_frame_rate, total_frames)
