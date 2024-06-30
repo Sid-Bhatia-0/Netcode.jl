@@ -1,53 +1,114 @@
-PROTOCOL_ID = parse(TYPE_OF_PROTOCOL_ID, bytes2hex(SHA.sha3_256(cat(NETCODE_VERSION_INFO, Vector{UInt8}("Netcode.jl"), dims = 1)))[1:16], base = 16)
+function TestConfig()
+    protocol_id = parse(TYPE_OF_PROTOCOL_ID, bytes2hex(SHA.sha3_256(cat(NETCODE_VERSION_INFO, Vector{UInt8}("Netcode.jl"), dims = 1)))[1:16], base = 16)
 
-RNG = Random.MersenneTwister(0)
+    rng = Random.MersenneTwister(0)
 
-SERVER_SIDE_SHARED_KEY = rand(RNG, UInt8, SIZE_OF_KEY)
+    server_side_shared_key = rand(rng, UInt8, SIZE_OF_KEY)
 
-ROOM_SIZE = 3
+    room_size = 3
 
-WAITING_ROOM_SIZE = ROOM_SIZE
+    waiting_room_size = room_size
 
-TIMEOUT_SECONDS = TYPE_OF_TIMEOUT_SECONDS(5)
+    timeout_seconds = TYPE_OF_TIMEOUT_SECONDS(5)
 
-CONNECT_TOKEN_EXPIRE_SECONDS = 10
+    connect_token_expire_seconds = 10
 
-AUTH_SERVER_ADDRESS = Sockets.InetAddr(Sockets.localhost, 10000)
+    auth_server_address = Sockets.InetAddr(Sockets.localhost, 10000)
 
-APP_SERVER_ADDRESSES = [Sockets.InetAddr(Sockets.localhost, 10001)]
+    app_server_addresses = [Sockets.InetAddr(Sockets.localhost, 10001)]
 
-APP_SERVER_ADDRESS = APP_SERVER_ADDRESSES[1]
+    app_server_address = app_server_addresses[1]
 
-USED_CONNECT_TOKEN_HISTORY_SIZE = ROOM_SIZE
+    used_connect_token_history_size = room_size
 
-@assert 1 <= length(APP_SERVER_ADDRESSES) <= MAX_NUM_SERVER_ADDRESSES
+    @assert 1 <= length(app_server_addresses) <= MAX_NUM_SERVER_ADDRESSES
 
-NUM_USERS = 8
+    num_users = 8
 
-# TODO: salts must be randomly generated during user registration
-USER_DATA = DF.DataFrame(username = ["user$(i)" for i in 1:NUM_USERS], salt = ["$(i)" |> SHA.sha3_256 |> bytes2hex for i in 1:NUM_USERS], hashed_salted_hashed_password = ["password$(i)" |> SHA.sha3_256 |> bytes2hex |> (x -> x * ("$(i)" |> SHA.sha3_256 |> bytes2hex)) |> SHA.sha3_256 |> bytes2hex for i in 1:NUM_USERS])
+    # TODO: salts must be randomly generated during user registration
+    user_data = DF.DataFrame(username = ["user$(i)" for i in 1:num_users], salt = ["$(i)" |> SHA.sha3_256 |> bytes2hex for i in 1:num_users], hashed_salted_hashed_password = ["password$(i)" |> SHA.sha3_256 |> bytes2hex |> (x -> x * ("$(i)" |> SHA.sha3_256 |> bytes2hex)) |> SHA.sha3_256 |> bytes2hex for i in 1:num_users])
 
-PACKET_RECEIVE_CHANNEL_SIZE = 32
+    packet_receive_channel_size = 32
 
-TARGET_FRAME_RATE = 60
-TOTAL_FRAMES = TARGET_FRAME_RATE * 30
+    target_frame_rate = 60
+    total_frames = target_frame_rate * 30
 
-CONNECT_TOKEN_REQUEST_FRAME = 5 * TARGET_FRAME_RATE
+    connect_token_request_frame = 5 * target_frame_rate
 
-CHALLENGE_DELAY = 10 ^ 9 ÷ 10
+    challenge_delay = 10 ^ 9 ÷ 10
 
-CONNECTION_REQUEST_PACKET_WAIT_TIME = 10 ^ 9 ÷ 10
+    connection_request_packet_wait_time = 10 ^ 9 ÷ 10
 
-CHALLENGE_TOKEN_KEY = rand(RNG, UInt8, SIZE_OF_KEY)
+    challenge_token_key = rand(rng, UInt8, SIZE_OF_KEY)
 
-CLIENT_SAVE_DEBUG_INFO_FILE = "client_save_debug_info.debug"
-SERVER_SAVE_DEBUG_INFO_FILE = "server_save_debug_info.debug"
+    client_save_debug_info_file = "client_save_debug_info.debug"
+    server_save_debug_info_file = "server_save_debug_info.debug"
 
-CLIENT_USERNAME = "user1"
-CLIENT_PASSWORD = "password1"
+    client_username = "user1"
+    client_password = "password1"
 
-test_app_server() = start_app_server(PROTOCOL_ID, SERVER_SIDE_SHARED_KEY, APP_SERVER_ADDRESS, PACKET_RECEIVE_CHANNEL_SIZE, ROOM_SIZE, WAITING_ROOM_SIZE, USED_CONNECT_TOKEN_HISTORY_SIZE, TARGET_FRAME_RATE, TOTAL_FRAMES, CHALLENGE_DELAY, CHALLENGE_TOKEN_KEY, save_debug_info_file = SERVER_SAVE_DEBUG_INFO_FILE)
+    return TestConfig(
+        protocol_id,
+        rng,
+        server_side_shared_key,
+        room_size,
+        waiting_room_size,
+        timeout_seconds,
+        connect_token_expire_seconds,
+        auth_server_address,
+        app_server_addresses,
+        app_server_address,
+        used_connect_token_history_size,
+        num_users,
+        user_data,
+        packet_receive_channel_size,
+        target_frame_rate,
+        total_frames,
+        connect_token_request_frame,
+        challenge_delay,
+        connection_request_packet_wait_time,
+        challenge_token_key,
+        client_save_debug_info_file,
+        server_save_debug_info_file,
+        client_username,
+        client_password,
+    )
+end
 
-test_auth_server() = start_auth_server(AUTH_SERVER_ADDRESS, USER_DATA, PROTOCOL_ID, TIMEOUT_SECONDS, CONNECT_TOKEN_EXPIRE_SECONDS, SERVER_SIDE_SHARED_KEY, APP_SERVER_ADDRESSES)
+test_app_server(test_config) = start_app_server(
+    test_config.protocol_id,
+    test_config.server_side_shared_key,
+    test_config.app_server_address,
+    test_config.packet_receive_channel_size,
+    test_config.room_size,
+    test_config.waiting_room_size,
+    test_config.used_connect_token_history_size,
+    test_config.target_frame_rate,
+    test_config.total_frames,
+    test_config.challenge_delay,
+    test_config.challenge_token_key,
+    save_debug_info_file = test_config.server_save_debug_info_file,
+)
 
-test_client() = start_client(AUTH_SERVER_ADDRESS, CLIENT_USERNAME, CLIENT_PASSWORD, PROTOCOL_ID, PACKET_RECEIVE_CHANNEL_SIZE, TARGET_FRAME_RATE, TOTAL_FRAMES, CONNECT_TOKEN_REQUEST_FRAME, CONNECTION_REQUEST_PACKET_WAIT_TIME, save_debug_info_file = CLIENT_SAVE_DEBUG_INFO_FILE)
+test_auth_server(test_config) = start_auth_server(
+    test_config.auth_server_address,
+    test_config.user_data,
+    test_config.protocol_id,
+    test_config.timeout_seconds,
+    test_config.connect_token_expire_seconds,
+    test_config.server_side_shared_key,
+    test_config.app_server_addresses,
+)
+
+test_client(test_config) = start_client(
+    test_config.auth_server_address,
+    test_config.client_username,
+    test_config.client_password,
+    test_config.protocol_id,
+    test_config.packet_receive_channel_size,
+    test_config.target_frame_rate,
+    test_config.total_frames,
+    test_config.connect_token_request_frame,
+    test_config.connection_request_packet_wait_time,
+    save_debug_info_file = test_config.client_save_debug_info_file,
+)
