@@ -118,6 +118,7 @@ function start_app_server(test_config)
         frame_debug_info = FrameDebugInfo()
         push!(DEBUG_INFO.frame_debug_infos, frame_debug_info)
 
+        frame_debug_info.frame_number = game_state.frame_number
         frame_debug_info.frame_start_time = frame_start_time
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
@@ -135,7 +136,7 @@ function start_app_server(test_config)
             @show game_state.frame_number
 
             client_netcode_address, data = take!(app_server_state.packet_receive_channel)
-            push!(frame_debug_info.packets_recieved, (time_ns(), client_netcode_address, copy(data)))
+            push!(frame_debug_info.packets_received, (time_ns(), client_netcode_address, copy(data)))
 
             handle_packet!(app_server_state, client_netcode_address, data)
         end
@@ -228,6 +229,7 @@ function start_client(test_config)
         frame_debug_info = FrameDebugInfo()
         push!(DEBUG_INFO.frame_debug_infos, frame_debug_info)
 
+        frame_debug_info.frame_number = game_state.frame_number
         frame_debug_info.frame_start_time = frame_start_time
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate

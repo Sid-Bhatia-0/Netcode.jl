@@ -26,6 +26,7 @@ struct TestConfig
 end
 
 mutable struct FrameDebugInfo
+    frame_number::Int
     frame_start_time::TYPE_OF_TIMESTAMP
     frame_time::Int
     update_time_theoretical::Int
