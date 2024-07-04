@@ -26,12 +26,15 @@ struct TestConfig
 end
 
 mutable struct FrameDebugInfo
+    frame_number::Int
     frame_start_time::TYPE_OF_TIMESTAMP
     frame_time::Int
     update_time_theoretical::Int
     update_time_observed::Int
     sleep_time_theoretical::Int
     sleep_time_observed::Int
+    packets_received::Vector{Any}
+    packets_sent::Vector{Any}
 end
 
 struct DebugInfo
