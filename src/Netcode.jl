@@ -7,6 +7,7 @@ import Debugger
 import GarishPrint as GP
 import HTTP
 import Random
+import REPL
 import Serialization
 import SHA
 import Sockets
