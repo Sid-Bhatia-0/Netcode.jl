@@ -18,13 +18,33 @@ function summarize_debug_info(debug_info)
     last_packet_sent_frame_number = findlast(length.(df[!, :packets_sent]) .> 0)
     @show num_packets_sent first_packet_sent_frame_number last_packet_sent_frame_number
 
-    variables = [:frame_time, :update_time_theoretical, :update_time_observed, :sleep_time_theoretical, :sleep_time_observed]
+    df[!, :num_packets_received] = length.(df[!, :packets_received])
+    df[!, :num_packets_sent] = length.(df[!, :packets_sent])
+
+    df[!, :num_packets_sent] = length.(df[!, :packets_sent])
+
+    time_variables = String.([:frame_time, :update_time_theoretical, :update_time_observed, :sleep_time_theoretical, :sleep_time_observed])
+    variables = String.([time_variables..., :num_packets_received, :num_packets_sent])
+
     metrics = (:min, :q25, :median, :q75, :max, :mean, :std)
+
     df_summary = DF.describe(df[!, variables], metrics...)
+
+    df_summary[!, :variable] = String.(df_summary[!, :variable])
+
     for column in metrics
-        df_summary[!, column] .= Float64.(df_summary[!, column]) ./ 1e6
+        df_summary[!, column] = Float64.(df_summary[!, column])
     end
-    df_summary[!, :variable] = String.(df_summary[!, :variable]) .* " (ms)"
+
+    for i in 1 : size(df_summary, 1)
+        if df_summary[i, :variable] in time_variables
+            df_summary[i, :variable] = df_summary[i, :variable] .* " (ms)"
+            for column in metrics
+                df_summary[i, column] = df_summary[i, column] ./ 1e6
+            end
+        end
+    end
+
     display(df_summary)
 
     return nothing
