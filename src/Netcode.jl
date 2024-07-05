@@ -7,11 +7,13 @@ import Debugger
 import GarishPrint as GP
 import HTTP
 import Random
+import REPL
 import Serialization
 import SHA
 import Sockets
 import Sodium
 import Statistics
+import REPL.Terminals as Terminals
 
 include("protocol_constants.jl")
 include("types.jl")

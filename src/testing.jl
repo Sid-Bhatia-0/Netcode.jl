@@ -92,3 +92,37 @@ function test_client()
 
     return start_client(test_config)
 end
+
+function get_raw_input_string()
+    terminal = REPL.TerminalMenus.terminal
+    terminal_in = terminal.in_stream
+
+    @assert Terminals.raw!(terminal, true)
+    @assert iszero(Base.start_reading(terminal_in))
+    print("") # NOTE: no bytes are read if I remove this line. Basically, if I don't print anything between the start_reading and stop_reading, then this doesn't work
+
+    num_bytes_available = bytesavailable(terminal_in)
+    raw_input_string = String(read(terminal_in, num_bytes_available))
+
+    @assert isnothing(Base.stop_reading(terminal_in))
+    @assert Terminals.raw!(terminal, false)
+
+    return raw_input_string
+end
+
+function test_debug_loop()
+    for i in 1:10
+        @show i
+
+        raw_input_string = get_raw_input_string()
+        @show raw_input_string
+
+        if raw_input_string == "p"
+            Debugger.@bp
+        end
+
+        sleep(1)
+    end
+
+    return nothing
+end
