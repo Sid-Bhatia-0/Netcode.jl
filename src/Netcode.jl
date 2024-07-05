@@ -6,6 +6,7 @@ import DataFrames as DF
 import Debugger
 import GarishPrint as GP
 import HTTP
+import Logging
 import Random
 import REPL
 import Serialization
