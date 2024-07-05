@@ -3,3 +3,4 @@
 src/scratchpad.jl
 Manifest.toml
 *.debug
+*.log
