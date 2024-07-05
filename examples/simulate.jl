@@ -1,4 +1,7 @@
+import Logging
 import Netcode
+
+Logging.global_logger(Logging.ConsoleLogger(stderr, Logging.Debug))
 
 if length(ARGS) == 0
     @info "Empty run"
