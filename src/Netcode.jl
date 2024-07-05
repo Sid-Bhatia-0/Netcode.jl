@@ -13,6 +13,7 @@ import SHA
 import Sockets
 import Sodium
 import Statistics
+import REPL.Terminals as Terminals
 
 include("protocol_constants.jl")
 include("types.jl")
