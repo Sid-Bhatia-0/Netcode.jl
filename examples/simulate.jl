@@ -1,20 +1,25 @@
 import Logging
+import LoggingExtras as LE
 import Netcode
-
-Logging.global_logger(Logging.ConsoleLogger(stderr, Logging.Debug))
 
 if length(ARGS) == 0
     @info "Empty run"
 elseif length(ARGS) == 1
     if ARGS[1] == "--app_server"
+        Logging.global_logger(LE.FileLogger("app_server.log"))
+
         @info "Running as app_server"
 
         Netcode.test_app_server()
     elseif ARGS[1] == "--auth_server"
+        Logging.global_logger(LE.FileLogger("auth_server.log"))
+
         @info "Running as auth_server"
 
         Netcode.test_auth_server()
     elseif ARGS[1] == "--client"
+        Logging.global_logger(LE.FileLogger("client.log"))
+
         @info "Running as client"
 
         Netcode.test_client()
