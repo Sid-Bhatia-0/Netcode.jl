@@ -122,7 +122,7 @@ function start_app_server(test_config)
         frame_debug_info.frame_start_time = frame_start_time
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
-            @show game_state.frame_number
+            @info "Progress" game_state.frame_number
         end
 
         if game_state.frame_number > 1
@@ -133,8 +133,6 @@ function start_app_server(test_config)
         app_server_state.num_occupied_waiting_room -= num_cleaned_up_waiting_room
 
         while !isempty(app_server_state.packet_receive_channel)
-            @show game_state.frame_number
-
             client_netcode_address, data = take!(app_server_state.packet_receive_channel)
             push!(frame_debug_info.packets_received, (time_ns(), client_netcode_address, copy(data)))
 
@@ -232,7 +230,7 @@ function start_client(test_config)
         frame_debug_info.frame_start_time = frame_start_time
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
-            @show game_state.frame_number
+            @info "Progress" game_state.frame_number
         end
 
         if game_state.frame_number > 1
