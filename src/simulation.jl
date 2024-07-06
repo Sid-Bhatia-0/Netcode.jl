@@ -4,19 +4,16 @@ end
 
 function summarize_debug_info(debug_info)
     num_frames = length(debug_info.frame_debug_infos)
-    @show num_frames
 
     df = create_df_debug_info(debug_info)
 
     num_packets_received = sum(length.(df[!, :packets_received]))
     first_packet_received_frame_number = findfirst(length.(df[!, :packets_received]) .> 0)
     last_packet_received_frame_number = findlast(length.(df[!, :packets_received]) .> 0)
-    @show num_packets_received first_packet_received_frame_number last_packet_received_frame_number
 
     num_packets_sent = sum(length.(df[!, :packets_sent]))
     first_packet_sent_frame_number = findfirst(length.(df[!, :packets_sent]) .> 0)
     last_packet_sent_frame_number = findlast(length.(df[!, :packets_sent]) .> 0)
-    @show num_packets_sent first_packet_sent_frame_number last_packet_sent_frame_number
 
     df[!, :num_packets_received] = length.(df[!, :packets_received])
     df[!, :num_packets_sent] = length.(df[!, :packets_sent])
@@ -45,7 +42,7 @@ function summarize_debug_info(debug_info)
         end
     end
 
-    display(df_summary)
+    @info num_frames num_packets_received first_packet_received_frame_number last_packet_received_frame_number num_packets_sent first_packet_sent_frame_number last_packet_sent_frame_number df_summary
 
     return nothing
 end
