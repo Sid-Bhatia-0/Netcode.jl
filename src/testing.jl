@@ -110,18 +110,89 @@ function get_raw_input_string()
     return raw_input_string
 end
 
-function test_debug_loop()
-    for i in 1:10
-        @show i
+function load_replay_file(replay_file)
+    io = open(replay_file, "r")
+    simulation_replay_info = SimulationReplayInfoTest(FrameReplayInfoTest[])
 
-        raw_input_string = get_raw_input_string()
-        @show raw_input_string
+    i = 1
 
-        if raw_input_string == "p"
-            Debugger.@bp
+    while !eof(io)
+        frame_replay_info = Serialization.deserialize(io)
+
+        @assert frame_replay_info.frame_number == i
+
+        push!(simulation_replay_info.frame_replay_infos, frame_replay_info)
+
+        i += 1
+    end
+
+    return simulation_replay_info
+end
+
+function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothing)
+    if !isnothing(replay_file_save) && !isnothing(replay_file_load)
+        @assert replay_file_save != replay_file_load
+    end
+
+    game_state = GameStateTest(1)
+
+    simulation_replay_info_save = SimulationReplayInfoTest(FrameReplayInfoTest[])
+
+    if !isnothing(replay_file_save)
+        io_replay_file_save = open(replay_file_save, "w")
+    else
+        io_replay_file_save = nothing
+    end
+
+    if !isnothing(replay_file_load)
+        simulation_replay_info_load = load_replay_file(replay_file_load)
+        max_frames = length(simulation_replay_info_load.frame_replay_infos)
+    else
+        simulation_replay_info_load = nothing
+        max_frames = 10
+    end
+
+    while true
+        frame_replay_info_save = FrameReplayInfoTest(0, "")
+
+        if !isnothing(simulation_replay_info_load)
+            frame_replay_info_load = simulation_replay_info_load.frame_replay_infos[game_state.frame_number]
+        else
+            frame_replay_info_load = nothing
+        end
+
+        Accessors.@reset frame_replay_info_save.frame_number = game_state.frame_number
+
+        if !isnothing(frame_replay_info_load)
+            raw_input_string = frame_replay_info_load.raw_input_string
+        else
+            raw_input_string = get_raw_input_string()
+        end
+
+        Accessors.@reset frame_replay_info_save.raw_input_string = raw_input_string
+
+        @info "Progress" game_state.frame_number raw_input_string
+
+        # if raw_input_string == "p"
+            # Debugger.@bp
+        # end
+
+        @assert length(simulation_replay_info_save.frame_replay_infos) == game_state.frame_number - 1
+        @assert frame_replay_info_save.frame_number == game_state.frame_number
+        push!(simulation_replay_info_save.frame_replay_infos, frame_replay_info_save)
+
+        if !isnothing(io_replay_file_save)
+            Serialization.serialize(io_replay_file_save, frame_replay_info_save)
+            flush(io_replay_file_save)
         end
 
         sleep(1)
+
+        if game_state.frame_number >= max_frames
+            break
+        end
+
+        game_state.frame_number += 1
     end
 
     return nothing

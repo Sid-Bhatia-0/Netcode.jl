@@ -1,3 +1,16 @@
+mutable struct GameStateTest
+    frame_number::Int
+end
+
+struct FrameReplayInfoTest
+    frame_number::Int
+    raw_input_string::String
+end
+
+struct SimulationReplayInfoTest
+    frame_replay_infos::Vector{FrameReplayInfoTest}
+end
+
 struct TestConfig
     protocol_id::TYPE_OF_PROTOCOL_ID
     rng::Random.AbstractRNG
