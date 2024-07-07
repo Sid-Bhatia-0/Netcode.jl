@@ -137,7 +137,11 @@ function get_clean_input_string(raw_input_string)
     end
 end
 
-function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothing)
+function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothing, is_fast_replay = false)
+    if is_fast_replay
+        @assert !isnothing(replay_file_load)
+    end
+
     if !isnothing(replay_file_save) && !isnothing(replay_file_load)
         @assert replay_file_save != replay_file_load
     end
@@ -196,7 +200,9 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
             flush(io_replay_file_save)
         end
 
-        sleep(1)
+        if !is_fast_replay
+            sleep(1)
+        end
 
         if game_state.frame_number >= max_frames
             break
