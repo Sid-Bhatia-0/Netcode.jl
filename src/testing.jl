@@ -173,7 +173,11 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
             frame_replay_info_load = nothing
         end
 
-        Accessors.@reset frame_replay_info_save.frame_number = game_state.frame_number
+        frame_replay_info_save.frame_number = game_state.frame_number
+
+        @assert length(simulation_replay_info_save.frame_replay_infos) == game_state.frame_number - 1
+        @assert frame_replay_info_save.frame_number == game_state.frame_number
+        push!(simulation_replay_info_save.frame_replay_infos, frame_replay_info_save)
 
         raw_input_string = get_raw_input_string()
 
@@ -183,17 +187,13 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
             clean_input_string = get_clean_input_string(raw_input_string)
         end
 
-        Accessors.@reset frame_replay_info_save.clean_input_string = clean_input_string
+        frame_replay_info_save.clean_input_string = clean_input_string
 
         @info "Progress" game_state.frame_number raw_input_string clean_input_string
 
         if raw_input_string == "p"
             Debugger.@bp
         end
-
-        @assert length(simulation_replay_info_save.frame_replay_infos) == game_state.frame_number - 1
-        @assert frame_replay_info_save.frame_number == game_state.frame_number
-        push!(simulation_replay_info_save.frame_replay_infos, frame_replay_info_save)
 
         if !isnothing(io_replay_file_save)
             Serialization.serialize(io_replay_file_save, frame_replay_info_save)

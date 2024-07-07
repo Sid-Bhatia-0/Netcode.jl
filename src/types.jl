@@ -2,7 +2,7 @@ mutable struct GameStateTest
     frame_number::Int
 end
 
-struct FrameReplayInfoTest
+mutable struct FrameReplayInfoTest
     frame_number::Int
     clean_input_string::String
 end
