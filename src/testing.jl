@@ -129,6 +129,14 @@ function load_replay_file(replay_file)
     return simulation_replay_info
 end
 
+function get_clean_input_string(raw_input_string)
+    if raw_input_string == "p"
+        return ""
+    else
+        return raw_input_string
+    end
+end
+
 function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothing)
     if !isnothing(replay_file_save) && !isnothing(replay_file_load)
         @assert replay_file_save != replay_file_load
@@ -163,19 +171,21 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
 
         Accessors.@reset frame_replay_info_save.frame_number = game_state.frame_number
 
+        raw_input_string = get_raw_input_string()
+
         if !isnothing(frame_replay_info_load)
-            raw_input_string = frame_replay_info_load.raw_input_string
+            clean_input_string = frame_replay_info_load.clean_input_string
         else
-            raw_input_string = get_raw_input_string()
+            clean_input_string = get_clean_input_string(raw_input_string)
         end
 
-        Accessors.@reset frame_replay_info_save.raw_input_string = raw_input_string
+        Accessors.@reset frame_replay_info_save.clean_input_string = clean_input_string
 
-        @info "Progress" game_state.frame_number raw_input_string
+        @info "Progress" game_state.frame_number raw_input_string clean_input_string
 
-        # if raw_input_string == "p"
-            # Debugger.@bp
-        # end
+        if raw_input_string == "p"
+            Debugger.@bp
+        end
 
         @assert length(simulation_replay_info_save.frame_replay_infos) == game_state.frame_number - 1
         @assert frame_replay_info_save.frame_number == game_state.frame_number

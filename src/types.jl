@@ -4,7 +4,7 @@ end
 
 struct FrameReplayInfoTest
     frame_number::Int
-    raw_input_string::String
+    clean_input_string::String
 end
 
 struct SimulationReplayInfoTest
