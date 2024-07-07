@@ -130,7 +130,7 @@ function load_replay_file(replay_file)
 end
 
 function get_clean_input_string(raw_input_string)
-    if raw_input_string == "p"
+    if raw_input_string == "p" || raw_input_string == "q"
         return ""
     else
         return raw_input_string
@@ -193,6 +193,8 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
 
         if raw_input_string == "p"
             Debugger.@bp
+        elseif raw_input_string == "q"
+            break
         end
 
         if !isnothing(io_replay_file_save)
