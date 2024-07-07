@@ -213,5 +213,9 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
         game_state.frame_number += 1
     end
 
+    if !isnothing(io_replay_file_save)
+        close(io_replay_file_save)
+    end
+
     return nothing
 end
