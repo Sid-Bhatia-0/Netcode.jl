@@ -130,15 +130,25 @@ function load_replay_file(replay_file)
 end
 
 function get_clean_input_string(raw_input_string)
-    if raw_input_string == "p" || raw_input_string == "q"
+    if raw_input_string == "p" || raw_input_string == "b" || raw_input_string == "q"
         return ""
     else
         return raw_input_string
     end
 end
 
-function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothing, is_fast_replay = false)
+function load_frame!(game_state, frame_info)
+    game_state.frame_number = frame_info.frame_number
+
+    return nothing
+end
+
+function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothing, is_fast_replay = false, frame_number_load_reset = nothing)
     if is_fast_replay
+        @assert !isnothing(replay_file_load)
+    end
+
+    if !isnothing(frame_number_load_reset)
         @assert !isnothing(replay_file_load)
     end
 
@@ -159,16 +169,29 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
     if !isnothing(replay_file_load)
         simulation_replay_info_load = load_replay_file(replay_file_load)
         max_frames = length(simulation_replay_info_load.frame_replay_infos)
+        is_replay_input = true
     else
         simulation_replay_info_load = nothing
         max_frames = 10
+        is_replay_input = false
     end
 
     while true
         frame_replay_info_save = FrameReplayInfoTest(0, "")
 
-        if !isnothing(simulation_replay_info_load)
-            frame_replay_info_load = simulation_replay_info_load.frame_replay_infos[game_state.frame_number]
+        if is_replay_input
+            @assert !isnothing(simulation_replay_info_load)
+
+            if !isnothing(frame_number_load_reset)
+                frame_replay_info_load = simulation_replay_info_load.frame_replay_infos[frame_number_load_reset]
+                load_frame!(game_state, frame_replay_info_load)
+                # TODO: reset simulation_replay_info_save
+                # TODO: rewrite replay_file_save
+                frame_number_load_reset == nothing # you don't want to keep loading the same frame again and again
+                Debugger.@bp
+            else
+                frame_replay_info_load = simulation_replay_info_load.frame_replay_infos[game_state.frame_number]
+            end
         else
             frame_replay_info_load = nothing
         end
@@ -181,21 +204,27 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
 
         raw_input_string = get_raw_input_string()
 
-        if !isnothing(frame_replay_info_load)
+        if raw_input_string == "p"
+            Debugger.@bp
+        if raw_input_string == "b" # "b" for branch off because we are going to fork the history
+            is_replay_input = false
+            frame_replay_info_load = nothing
+            Debugger.@bp
+        elseif raw_input_string == "q"
+            break
+        end
+
+        if is_replay_input
+            @assert !isnothing(frame_replay_info_load)
             clean_input_string = frame_replay_info_load.clean_input_string
         else
+            @assert isnothing(frame_replay_info_load)
             clean_input_string = get_clean_input_string(raw_input_string)
         end
 
         frame_replay_info_save.clean_input_string = clean_input_string
 
         @info "Progress" game_state.frame_number raw_input_string clean_input_string
-
-        if raw_input_string == "p"
-            Debugger.@bp
-        elseif raw_input_string == "q"
-            break
-        end
 
         if !isnothing(io_replay_file_save)
             Serialization.serialize(io_replay_file_save, frame_replay_info_save)
