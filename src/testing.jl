@@ -186,12 +186,25 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
             @assert !isnothing(simulation_replay_info_load)
 
             if !isnothing(frame_number_load_reset)
+                Debugger.@bp
                 frame_replay_info_load = simulation_replay_info_load.frame_replay_infos[frame_number_load_reset]
                 load_frame!(game_state, frame_replay_info_load)
-                # TODO: reset simulation_replay_info_save
-                # TODO: rewrite replay_file_save
-                frame_number_load_reset == nothing # you don't want to keep loading the same frame again and again
-                Debugger.@bp
+
+                empty!(simulation_replay_info_save.frame_replay_infos)
+                for i in 1 : frame_number_load_reset - 1
+                    push!(simulation_replay_info_save.frame_replay_infos, deepcopy(simulation_replay_info_load.frame_replay_infos[i]))
+                end
+
+                if !isnothing(io_replay_file_save)
+                    close(io_replay_file_save)
+                    io_replay_file_save = open(replay_file_save, "w")
+                    for x in simulation_replay_info_save.frame_replay_infos
+                        Serialization.serialize(io_replay_file_save, x)
+                    end
+                    flush(io_replay_file_save)
+                end
+
+                frame_number_load_reset = nothing # you don't want to keep loading the same frame again and again
             else
                 frame_replay_info_load = simulation_replay_info_load.frame_replay_infos[game_state.frame_number]
             end
