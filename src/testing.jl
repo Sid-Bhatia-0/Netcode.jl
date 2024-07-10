@@ -156,6 +156,7 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
         @assert replay_file_save != replay_file_load
     end
 
+    max_num_frames = 10
     game_state = GameStateTest(1)
 
     simulation_replay_info_save = SimulationReplayInfoTest(FrameReplayInfoTest[])
@@ -168,14 +169,13 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
 
     if !isnothing(replay_file_load)
         simulation_replay_info_load = load_replay_file(replay_file_load)
-        max_frames = length(simulation_replay_info_load.frame_replay_infos)
+        @assert length(simulation_replay_info_load.frame_replay_infos) <= max_num_frames
         if !isnothing(frame_number_load_reset)
-            @assert frame_number_load_reset in 1 : max_frames
+            @assert frame_number_load_reset in 1 : length(simulation_replay_info_load.frame_replay_infos)
         end
         is_replay_input = true
     else
         simulation_replay_info_load = nothing
-        max_frames = 10
         is_replay_input = false
     end
 
@@ -187,6 +187,9 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
 
             if !isnothing(frame_number_load_reset)
                 Debugger.@bp
+
+                @assert frame_number_load_reset <= length(simulation_replay_info_load.frame_replay_infos)
+
                 frame_replay_info_load = simulation_replay_info_load.frame_replay_infos[frame_number_load_reset]
                 load_frame!(game_state, frame_replay_info_load)
 
@@ -251,7 +254,9 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
             sleep(1)
         end
 
-        if game_state.frame_number >= max_frames
+        if !is_replay_input && game_state.frame_number >= max_num_frames
+            break
+        elseif is_replay_input && isnothing(frame_number_load_reset) && game_state.frame_number >= length(simulation_replay_info_load.frame_replay_infos)
             break
         end
 
