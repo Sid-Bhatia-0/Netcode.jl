@@ -169,6 +169,9 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
     if !isnothing(replay_file_load)
         simulation_replay_info_load = load_replay_file(replay_file_load)
         max_frames = length(simulation_replay_info_load.frame_replay_infos)
+        if !isnothing(frame_number_load_reset)
+            @assert frame_number_load_reset in 1 : max_frames
+        end
         is_replay_input = true
     else
         simulation_replay_info_load = nothing
