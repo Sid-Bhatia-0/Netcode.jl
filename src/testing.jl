@@ -223,9 +223,9 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
         if raw_input_string == "p"
             Debugger.@bp
         elseif raw_input_string == "b" # "b" for branch off because we are going to fork the history
+            Debugger.@bp
             is_replay_input = false
             frame_replay_info_load = nothing
-            Debugger.@bp
         elseif raw_input_string == "q"
             break
         end
