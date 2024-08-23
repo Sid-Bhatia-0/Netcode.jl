@@ -1,3 +1,43 @@
+function ReplayManager(; replay_file_save = nothing, replay_file_load = nothing, frame_number_load_reset = nothing)
+    if !isnothing(frame_number_load_reset)
+        @assert !isnothing(replay_file_load)
+    end
+
+    if !isnothing(replay_file_save) && !isnothing(replay_file_load)
+        @assert replay_file_save != replay_file_load
+    end
+
+    if !isnothing(replay_file_save)
+        io_replay_file_save = open(replay_file_save, "w")
+        simulation_replay_info_save = SimulationReplayInfoTest(FrameReplayInfoTest[])
+    else
+        io_replay_file_save = nothing
+        simulation_replay_info_save = nothing
+    end
+
+    if !isnothing(replay_file_load)
+        simulation_replay_info_load = load_replay_file(replay_file_load)
+        is_replay_input = true
+
+        if !isnothing(frame_number_load_reset)
+            @assert frame_number_load_reset in 1 : length(simulation_replay_info_load.frame_replay_infos)
+        end
+    else
+        simulation_replay_info_load = nothing
+        is_replay_input = nothing
+    end
+
+    return ReplayManager(
+        replay_file_save,
+        replay_file_load,
+        io_replay_file_save,
+        simulation_replay_info_save,
+        simulation_replay_info_load,
+        is_replay_input,
+        frame_number_load_reset,
+    )
+end
+
 FrameDebugInfo() = FrameDebugInfo(0, 0, 0, 0, 0, 0, 0, [], [])
 
 function GameState(target_frame_rate, total_frames)
