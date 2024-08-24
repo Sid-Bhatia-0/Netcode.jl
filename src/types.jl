@@ -1,3 +1,10 @@
+mutable struct GameStateTest
+    frame_number::Int
+    raw_input_string::String
+    clean_input_string::String
+    max_num_frames::Int
+end
+
 mutable struct FrameDebugInfoTest
     game_state::GameStateTest
 end
@@ -6,27 +13,12 @@ mutable struct DebugInfoTest
     frame_debug_infos::Vector{FrameDebugInfoTest}
 end
 
-mutable struct GameStateTest
-    frame_number::Int
-    raw_input_string::String
-    clean_input_string::String
-end
-
-mutable struct FrameReplayInfoTest
-    frame_number::Int
-    clean_input_string::String
-end
-
-struct SimulationReplayInfoTest
-    frame_replay_infos::Vector{FrameReplayInfoTest}
-end
-
 mutable struct ReplayManager
     replay_file_save::Union{Nothing, String}
     replay_file_load::Union{Nothing, String}
     io_replay_file_save::Union{Nothing, IO}
-    simulation_replay_info_save::Union{Nothing, SimulationReplayInfoTest}
-    simulation_replay_info_load::Union{Nothing, SimulationReplayInfoTest}
+    debug_info_save::DebugInfoTest
+    debug_info_load::Union{Nothing, DebugInfoTest}
     is_replay_input::Union{Nothing, Bool}
     frame_number_load_reset::Union{Nothing, Int}
 end

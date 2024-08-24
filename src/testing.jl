@@ -112,21 +112,21 @@ end
 
 function load_replay_file(replay_file)
     io = open(replay_file, "r")
-    simulation_replay_info = SimulationReplayInfoTest(FrameReplayInfoTest[])
+    debug_info_load = DebugInfoTest(FrameDebugInfoTest[])
 
     i = 1
 
     while !eof(io)
-        frame_replay_info = Serialization.deserialize(io)
+        frame_debug_info_load = Serialization.deserialize(io)
 
-        @assert frame_replay_info.frame_number == i
+        @assert frame_debug_info_load.game_state.frame_number == i
 
-        push!(simulation_replay_info.frame_replay_infos, frame_replay_info)
+        push!(debug_info_load.frame_debug_infos, frame_debug_info_load)
 
         i += 1
     end
 
-    return simulation_replay_info
+    return debug_info_load
 end
 
 function get_clean_input_string(raw_input_string)
@@ -137,49 +137,39 @@ function get_clean_input_string(raw_input_string)
     end
 end
 
-function get_clean_input_string(raw_input_string, replay_manager, frame_number)
-    if isnothing(replay_manager.load_replay_file) || !replay_manager.is_replay_input
-        return frame_replay_info_load.simulation_replay_info_load.frame_replay_infos[frame_number]
-    else
-        return get_clean_input_string(raw_input_string)
-    end
-end
-
-function load_frame!(game_state, frame_info)
-    game_state.frame_number = frame_info.frame_number
+function load_frame!(game_state, frame_debug_info_load)
+    game_state.frame_number = frame_debug_info_load.game_state.frame_number
+    game_state.clean_input_string = frame_debug_info_load.game_state.clean_input_string
+    game_state.max_num_frames = frame_debug_info_load.game_state.max_num_frames
 
     return nothing
 end
 
-function load_frame_maybe!(game_state, replay_manager, )
-    if !isnothing(replay_manager.load_replay_file)
-        if !isnothing(replay_manager.frame_number_load_reset)
-            @assert frame_number_load_reset in 1 : length(replay_manager.simulation_replay_info_load.frame_replay_infos)
+function load_frame_maybe!(game_state, replay_manager)
+    if !isnothing(replay_manager.replay_file_load) && !isnothing(replay_manager.frame_number_load_reset)
+        frame_debug_info_load = replay_manager.debug_info_load.frame_debug_infos[replay_manager.frame_number_load_reset]
+        load_frame!(game_state, frame_debug_info_load)
 
-            frame_replay_info_load = replay_manager.simulation_replay_info_load.frame_replay_infos[frame_number_load_reset]
-            load_frame!(game_state, frame_replay_info_load)
-            # load_frame!(debug_info, frame_replay_info_load)
+        # resetting and updating debug info save
+        empty!(replay_manager.debug_info_save.frame_debug_infos)
+        for i in 1 : replay_manager.frame_number_load_reset
+            push!(replay_manager.debug_info_save.frame_debug_infos, deepcopy(replay_manager.debug_info_load.frame_debug_infos[i]))
+        end
+        replay_manager.debug_info_save.frame_debug_infos[end].game_state = game_state
 
-            # this is basically updating the debug thing
-            # empty!(replay_manager.simulation_replay_info_save.frame_replay_infos)
-            # for i in 1 : replay_manager.frame_number_load_reset - 1
-                # push!(replay_manager.simulation_replay_info_save.frame_replay_infos, deepcopy(replay_manager.simulation_replay_info_load.frame_replay_infos[i]))
-            # end
+        if !isnothing(replay_manager.replay_file_save)
+            close(replay_manager.io_replay_file_save)
 
-            if !isnothing(replay_manager.replay_file_save)
-                close(replay_manager.io_replay_file_save)
+            replay_manager.io_replay_file_save = open(replay_manager.replay_file_save, "w")
 
-                replay_manager.io_replay_file_save = open(replay_manager.replay_file_save, "w")
-
-                for i in 1 : replay_manager.frame_number_load_reset - 1
-                    Serialization.serialize(replay_manager.io_replay_file_save, replay_manager.simulation_replay_info_load.frame_replay_infos[i])
-                end
-
-                flush(replay_manager.io_replay_file_save)
+            for i in 1 : replay_manager.frame_number_load_reset
+                Serialization.serialize(replay_manager.io_replay_file_save, replay_manager.debug_info_save.frame_debug_infos[i])
             end
 
-            replay_manager.frame_number_load_reset = nothing # you don't want to keep loading the same frame again and again
+            flush(replay_manager.io_replay_file_save)
         end
+
+        replay_manager.frame_number_load_reset = nothing # you don't want to keep loading the same frame again and again
     end
 
     return nothing
@@ -187,8 +177,9 @@ end
 
 function save_frame_maybe!(game_state, replay_manager)
     if !isnothing(replay_manager.replay_file_save)
-        Serialization.serialize(replay_manager.io_replay_file_save, replay_manager.frame_replay_info_save)
-        flush(io_replay_file_save)
+        @assert game_state.frame_number == replay_manager.debug_info_save.frame_debug_infos[end].game_state.frame_number
+        Serialization.serialize(replay_manager.io_replay_file_save, replay_manager.debug_info_save.frame_debug_infos[end])
+        flush(replay_manager.io_replay_file_save)
     end
 
     return nothing
@@ -199,9 +190,7 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
         @assert !isnothing(replay_file_load)
     end
 
-    max_num_frames = 10
-    game_state = GameStateTest(1, "", "")
-    debug_info = DebugInfoTest(FrameDebugInfoTest[])
+    game_state = GameStateTest(1, "", "", 10)
 
     replay_manager = ReplayManager(;
         replay_file_save = replay_file_save,
@@ -209,19 +198,11 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
         frame_number_load_reset = frame_number_load_reset,
     )
 
+    frame_debug_info = FrameDebugInfoTest(game_state)
+    push!(replay_manager.debug_info_save.frame_debug_infos, frame_debug_info)
+
     while true
-        frame_debug_info = FrameDebugInfo()
-        push!(debug_info.frame_debug_infos, frame_debug_info)
-
-        frame_debug_info.game_state = game_state
-
-        frame_debug_info = FrameReplayInfoTest(0, "")
-
-        @assert length(debug_info.frame_replay_infos) == game_state.frame_number - 1
-        @assert frame_debug_info.frame_number == game_state.frame_number
-        push!(debug_info.frame_replay_infos, frame_debug_info)
-
-        load_frame_maybe!(game_state, replay_manager)
+        @assert length(replay_manager.debug_info_save.frame_debug_infos) == game_state.frame_number
 
         game_state.raw_input_string = get_raw_input_string()
 
@@ -231,23 +212,24 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
             break
         end
 
-        game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
-
-        replay_input_maybe!(game_state, replay_manager)
+        if !isnothing(replay_manager.replay_file_load) && replay_manager.is_replay_input
+            @assert game_state.frame_number == replay_manager.debug_info_load.frame_debug_infos[game_state.frame_number].game_state.frame_number
+            game_state.clean_input_string = replay_manager.debug_info_load.frame_debug_infos[game_state.frame_number].game_state.clean_input_string
+        else
+            game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
+        end
 
         @info "Progress" game_state.frame_number game_state.raw_input_string game_state.clean_input_string
+        @info "Processing..."
 
         save_frame_maybe!(game_state, replay_manager)
-
-        frame_debug_info.game_state = deepcopy(game_state)
+        load_frame_maybe!(game_state, replay_manager)
 
         if !is_fast_replay
             sleep(1)
         end
 
-        if !is_replay_input && game_state.frame_number >= max_num_frames
-            break
-        elseif is_replay_input && isnothing(frame_number_load_reset) && game_state.frame_number >= length(simulation_replay_info_load.frame_replay_infos)
+        if game_state.frame_number >= game_state.max_num_frames && isnothing(replay_manager.frame_number_load_reset)
             break
         end
 

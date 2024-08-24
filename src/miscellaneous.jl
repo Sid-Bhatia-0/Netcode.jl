@@ -9,30 +9,30 @@ function ReplayManager(; replay_file_save = nothing, replay_file_load = nothing,
 
     if !isnothing(replay_file_save)
         io_replay_file_save = open(replay_file_save, "w")
-        simulation_replay_info_save = SimulationReplayInfoTest(FrameReplayInfoTest[])
     else
         io_replay_file_save = nothing
-        simulation_replay_info_save = nothing
     end
 
+    debug_info_save = DebugInfoTest(FrameDebugInfoTest[])
+
     if !isnothing(replay_file_load)
-        simulation_replay_info_load = load_replay_file(replay_file_load)
+        debug_info_load = load_replay_file(replay_file_load)
         is_replay_input = true
 
         if !isnothing(frame_number_load_reset)
-            @assert frame_number_load_reset in 1 : length(simulation_replay_info_load.frame_replay_infos)
+            @assert frame_number_load_reset in 1 : length(debug_info_load.frame_debug_infos)
         end
     else
-        simulation_replay_info_load = nothing
-        is_replay_input = nothing
+        debug_info_load = nothing
+        is_replay_input = false
     end
 
     return ReplayManager(
         replay_file_save,
         replay_file_load,
         io_replay_file_save,
-        simulation_replay_info_save,
-        simulation_replay_info_load,
+        debug_info_save,
+        debug_info_load,
         is_replay_input,
         frame_number_load_reset,
     )
