@@ -329,8 +329,8 @@ function create_logger(name, modules)
         shouldlog_args -> shouldlog_args._module in modules,
         LE.TeeLogger(
             Logging.ConsoleLogger(),
-            LE.MinLevelLogger(LE.FileLogger("$(name).info"), Logging.Info),
-            LE.MinLevelLogger(LE.FileLogger("$(name).debug"), Logging.Debug),
+            LE.MinLevelLogger(LE.FileLogger("$(name)_info.log"), Logging.Info),
+            LE.MinLevelLogger(LE.FileLogger("$(name)_debug.log"), Logging.Debug),
         ),
     )
 end
