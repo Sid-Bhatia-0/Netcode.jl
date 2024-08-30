@@ -155,7 +155,6 @@ function load_frame_maybe!(game_state, replay_manager)
         for i in 1 : replay_manager.frame_number_load_reset
             push!(replay_manager.debug_info_save.frame_debug_infos, deepcopy(replay_manager.debug_info_load.frame_debug_infos[i]))
         end
-        replay_manager.debug_info_save.frame_debug_infos[end].game_state = game_state
 
         if !isnothing(replay_manager.replay_file_save)
             close(replay_manager.io_replay_file_save)
@@ -170,6 +169,8 @@ function load_frame_maybe!(game_state, replay_manager)
         end
 
         replay_manager.frame_number_load_reset = nothing # you don't want to keep loading the same frame again and again
+
+        Debugger.@bp
     end
 
     return nothing
@@ -199,9 +200,10 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
     )
 
     frame_debug_info = FrameDebugInfoTest(game_state)
-    push!(replay_manager.debug_info_save.frame_debug_infos, frame_debug_info)
 
     while true
+        push!(replay_manager.debug_info_save.frame_debug_infos, frame_debug_info)
+
         @assert length(replay_manager.debug_info_save.frame_debug_infos) == game_state.frame_number
 
         game_state.raw_input_string = get_raw_input_string()
@@ -221,6 +223,8 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
 
         @info "Progress" game_state.frame_number game_state.raw_input_string game_state.clean_input_string
         @info "Processing..."
+
+        replay_manager.debug_info_save.frame_debug_infos[game_state.frame_number] = deepcopy(replay_manager.debug_info_save.frame_debug_infos[game_state.frame_number])
 
         save_frame_maybe!(game_state, replay_manager)
         load_frame_maybe!(game_state, replay_manager)
