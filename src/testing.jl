@@ -224,14 +224,14 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
         @info "Progress" game_state.frame_number game_state.raw_input_string game_state.clean_input_string
         @info "Processing..."
 
+        if !is_fast_replay
+            sleep(1)
+        end
+
         replay_manager.debug_info_save.frame_debug_infos[game_state.frame_number] = deepcopy(replay_manager.debug_info_save.frame_debug_infos[game_state.frame_number])
 
         save_frame_maybe!(game_state, replay_manager)
         load_frame_maybe!(game_state, replay_manager)
-
-        if !is_fast_replay
-            sleep(1)
-        end
 
         if game_state.frame_number >= game_state.max_num_frames && isnothing(replay_manager.frame_number_load_reset)
             break
