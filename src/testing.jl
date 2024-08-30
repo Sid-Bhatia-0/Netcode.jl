@@ -233,7 +233,7 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
         save_frame_maybe!(game_state, replay_manager)
         load_frame_maybe!(game_state, replay_manager)
 
-        if game_state.frame_number >= game_state.max_num_frames && isnothing(replay_manager.frame_number_load_reset)
+        if game_state.frame_number >= game_state.max_num_frames || (replay_manager.is_replay_input && game_state.frame_number == length(replay_manager.debug_info_load.frame_debug_infos))
             break
         end
 
