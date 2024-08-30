@@ -193,13 +193,13 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
 
     game_state = GameStateTest(1, "", "", 10)
 
+    frame_debug_info = FrameDebugInfoTest(game_state)
+
     replay_manager = ReplayManager(;
         replay_file_save = replay_file_save,
         replay_file_load = replay_file_load,
         frame_number_load_reset = frame_number_load_reset,
     )
-
-    frame_debug_info = FrameDebugInfoTest(game_state)
 
     while true
         push!(replay_manager.debug_info_save.frame_debug_infos, frame_debug_info)
