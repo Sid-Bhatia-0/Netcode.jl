@@ -76,18 +76,30 @@ function TestConfig()
 end
 
 function test_app_server()
+    Logging.global_logger(Netcode.create_logger("app_server", [Main, Netcode]))
+
+    @info "Running as app_server"
+
     test_config = TestConfig()
 
     return start_app_server(test_config)
 end
 
 function test_auth_server()
+    Logging.global_logger(Netcode.create_logger("auth_server", [Main, Netcode]))
+
+    @info "Running as auth_server"
+
     test_config = TestConfig()
 
     return start_auth_server(test_config)
 end
 
 function test_client()
+    Logging.global_logger(Netcode.create_logger("client", [Main, Netcode]))
+
+    @info "Running as client"
+
     test_config = TestConfig()
 
     return start_client(test_config)
