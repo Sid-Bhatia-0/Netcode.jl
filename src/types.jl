@@ -1,3 +1,28 @@
+mutable struct GameStateTest
+    frame_number::Int
+    raw_input_string::String
+    clean_input_string::String
+    max_num_frames::Int
+end
+
+mutable struct FrameDebugInfoTest
+    game_state::GameStateTest
+end
+
+mutable struct DebugInfoTest
+    frame_debug_infos::Vector{FrameDebugInfoTest}
+end
+
+mutable struct ReplayManager
+    replay_file_save::Union{Nothing, String}
+    replay_file_load::Union{Nothing, String}
+    io_replay_file_save::Union{Nothing, IO}
+    debug_info_save::DebugInfoTest
+    debug_info_load::Union{Nothing, DebugInfoTest}
+    is_replay_input::Union{Nothing, Bool}
+    frame_number_load_reset::Union{Nothing, Int}
+end
+
 struct TestConfig
     protocol_id::TYPE_OF_PROTOCOL_ID
     rng::Random.AbstractRNG
