@@ -129,7 +129,7 @@ function start_app_server(test_config)
             DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_start_time
         end
 
-        num_cleaned_up_waiting_room = clean_up!(app_server_state.waiting_room, frame_start_time)
+        num_cleaned_up_waiting_room = clean_up!(app_server_state.waiting_room, game_state.frame_number, game_state.target_frame_rate)
         app_server_state.num_occupied_waiting_room -= num_cleaned_up_waiting_room
 
         while !isempty(app_server_state.packet_receive_channel)
@@ -141,7 +141,7 @@ function start_app_server(test_config)
 
         for (i, waiting_client_slot) in enumerate(app_server_state.waiting_room)
             if waiting_client_slot.is_used
-                if (frame_start_time > waiting_client_slot.last_challenge_sent_timestamp) && (frame_start_time - waiting_client_slot.last_challenge_sent_timestamp > challenge_delay)
+                if (game_state.frame_number > waiting_client_slot.last_challenge_sent_frame) && (game_state.frame_number - waiting_client_slot.last_challenge_sent_frame > (challenge_delay * game_state.target_frame_rate) ÷ 10 ^ 9)
                     challenge_token_info = ChallengeTokenInfo(app_server_state.challenge_token_sequence_number, waiting_client_slot.client_id, waiting_client_slot.user_data, challenge_token_key)
                     app_server_state.challenge_token_sequence_number += 1
 
@@ -169,7 +169,7 @@ function start_app_server(test_config)
 
                     app_server_state.packet_sequence_number += 1
 
-                    app_server_state.waiting_room[i] = Accessors.@set waiting_client_slot.last_challenge_sent_timestamp = frame_start_time
+                    app_server_state.waiting_room[i] = Accessors.@set waiting_client_slot.last_challenge_sent_frame = game_state.frame_number
                 end
             end
         end
@@ -272,7 +272,7 @@ function start_client(test_config)
         end
 
         # send connection request packet when possible
-        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (frame_start_time > client_state.last_connection_request_packet_sent_timestamp) && (frame_start_time - client_state.last_connection_request_packet_sent_timestamp > connection_request_packet_wait_time)
+        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_number > client_state.last_connection_request_packet_sent_frame) && (game_state.frame_number - client_state.last_connection_request_packet_sent_frame > (connection_request_packet_wait_time * game_state.target_frame_rate) ÷ 10 ^ 9)
             connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet)
 
             data = get_serialized_data(connection_request_packet)
@@ -288,7 +288,7 @@ function start_client(test_config)
             @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type
             push!(frame_debug_info.packets_sent, (time_ns(), app_server_inet_address, copy(data)))
 
-            client_state.last_connection_request_packet_sent_timestamp = frame_start_time
+            client_state.last_connection_request_packet_sent_frame = game_state.frame_number
         end
 
         simulate_update!(game_state)
