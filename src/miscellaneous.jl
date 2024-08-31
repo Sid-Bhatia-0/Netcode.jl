@@ -75,9 +75,8 @@ function get_inetaddr(netcode_address::NetcodeAddress)
     return Sockets.InetAddr(host, netcode_address.port)
 end
 
-function ConnectTokenInfo(protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses, client_id)
+function ConnectTokenInfo(create_timestamp, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses, client_id)
     # TODO: assert conditions on inputs
-    create_timestamp = time_ns()
     expire_timestamp = create_timestamp + connect_token_expire_seconds * 10 ^ 9
 
     return ConnectTokenInfo(
