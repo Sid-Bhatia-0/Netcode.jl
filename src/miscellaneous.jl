@@ -42,7 +42,7 @@ FrameDebugInfo() = FrameDebugInfo(0, 0, 0, 0, 0, 0, 0, [], [])
 
 function GameState(target_frame_rate, total_frames)
     target_ns_per_frame = 1_000_000_000 ÷ target_frame_rate
-    return GameState(time_ns(), 1, target_frame_rate, target_ns_per_frame, total_frames)
+    return GameState(0, 1, 0, target_frame_rate, target_ns_per_frame, total_frames)
 end
 
 function NetcodeAddress(address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}})
@@ -75,9 +75,8 @@ function get_inetaddr(netcode_address::NetcodeAddress)
     return Sockets.InetAddr(host, netcode_address.port)
 end
 
-function ConnectTokenInfo(protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses, client_id)
+function ConnectTokenInfo(create_timestamp, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses, client_id)
     # TODO: assert conditions on inputs
-    create_timestamp = time_ns()
     expire_timestamp = create_timestamp + connect_token_expire_seconds * 10 ^ 9
 
     return ConnectTokenInfo(
@@ -205,7 +204,7 @@ function ClientState(protocol_id, packet_receive_channel_size)
 
     connect_token_packet = nothing
 
-    last_connection_request_packet_sent_timestamp = 0
+    last_connection_request_packet_sent_frame = 0
 
     return ClientState(
         protocol_id,
@@ -213,7 +212,7 @@ function ClientState(protocol_id, packet_receive_channel_size)
         packet_receive_channel,
         state_machine_state,
         connect_token_packet,
-        last_connection_request_packet_sent_timestamp,
+        last_connection_request_packet_sent_frame,
     )
 end
 
@@ -271,21 +270,21 @@ end
 
 function try_add!(used_connect_token_history::Vector{ConnectTokenSlot}, connect_token_slot::ConnectTokenSlot)
     i_oldest = 1
-    last_seen_timestamp_oldest = used_connect_token_history[i_oldest].last_seen_timestamp
+    last_seen_frame_oldest = used_connect_token_history[i_oldest].last_seen_frame
 
     for i in axes(used_connect_token_history, 1)
         if used_connect_token_history[i].hmac_hash == connect_token_slot.hmac_hash
             if used_connect_token_history[i].netcode_address != connect_token_slot.netcode_address
                 return false
-            elseif used_connect_token_history[i].last_seen_timestamp < connect_token_slot.last_seen_timestamp
+            elseif used_connect_token_history[i].last_seen_frame < connect_token_slot.last_seen_frame
                 used_connect_token_history[i] = connect_token_slot
                 return true
             end
         end
 
-        if last_seen_timestamp_oldest > used_connect_token_history[i].last_seen_timestamp
+        if last_seen_frame_oldest > used_connect_token_history[i].last_seen_frame
             i_oldest = i
-            last_seen_timestamp_oldest = used_connect_token_history[i].last_seen_timestamp
+            last_seen_frame_oldest = used_connect_token_history[i].last_seen_frame
         end
     end
 
@@ -305,11 +304,11 @@ function try_add!(room, slot)
     return false
 end
 
-function clean_up!(waiting_room::Vector{WaitingClientSlot}, frame_start_time)
+function clean_up!(waiting_room::Vector{WaitingClientSlot}, frame_number, target_frame_rate)
     num_cleaned_up = 0
 
     for (i, waiting_client_slot) in enumerate(waiting_room)
-        if waiting_client_slot.is_used && (waiting_client_slot.last_seen_timestamp + waiting_client_slot.timeout_seconds * 10 ^ 9 <= frame_start_time)
+        if waiting_client_slot.is_used && (waiting_client_slot.last_seen_frame + waiting_client_slot.timeout_seconds * target_frame_rate <= frame_number)
             waiting_room[i] = Accessors.@set waiting_client_slot.is_used = false
             num_cleaned_up += 1
         end

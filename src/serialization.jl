@@ -254,7 +254,7 @@ function try_read(io::IO, ::Type{ConnectTokenPacket}, expected_protocol_id)
     )
 end
 
-function try_read(io::IO, ::Type{ConnectionRequestPacket}, expected_protocol_id)
+function try_read(io::IO, ::Type{ConnectionRequestPacket}, expected_protocol_id, frame_start_time)
     packet_prefix = read(io, TYPE_OF_PACKET_PREFIX)
 
     packet_type = get_packet_type(packet_prefix)
@@ -273,7 +273,7 @@ function try_read(io::IO, ::Type{ConnectionRequestPacket}, expected_protocol_id)
     end
 
     expire_timestamp = read(io, TYPE_OF_TIMESTAMP)
-    if expire_timestamp <= time_ns()
+    if expire_timestamp <= frame_start_time
         return nothing
     end
 

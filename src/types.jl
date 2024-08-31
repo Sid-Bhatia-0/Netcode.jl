@@ -71,6 +71,7 @@ const DEBUG_INFO = DebugInfo(FrameDebugInfo[])
 mutable struct GameState
     game_start_time::TYPE_OF_TIMESTAMP
     frame_number::Int
+    frame_start_time::TYPE_OF_TIMESTAMP
     target_frame_rate::Int
     target_ns_per_frame::Int
     total_frames::Int
@@ -98,8 +99,8 @@ struct WaitingClientSlot
     netcode_address::NetcodeAddress
     client_id::TYPE_OF_CLIENT_ID
     user_data::Vector{UInt8}
-    last_seen_timestamp::TYPE_OF_TIMESTAMP
-    last_challenge_sent_timestamp::TYPE_OF_TIMESTAMP
+    last_seen_frame::Int
+    last_challenge_sent_frame::Int
     timeout_seconds::TYPE_OF_TIMEOUT_SECONDS
     client_to_server_key::Vector{UInt8}
     server_to_client_key::Vector{UInt8}
@@ -166,7 +167,7 @@ struct ChallengeTokenMessage
 end
 
 struct ConnectTokenSlot
-    last_seen_timestamp::TYPE_OF_TIMESTAMP
+    last_seen_frame::Int
     hmac_hash::UInt64
     netcode_address::NetcodeAddress
 end
@@ -236,5 +237,5 @@ mutable struct ClientState
     packet_receive_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     state_machine_state::Int
     connect_token_packet::Union{Nothing, ConnectTokenPacket}
-    last_connection_request_packet_sent_timestamp::TYPE_OF_TIMESTAMP
+    last_connection_request_packet_sent_frame::Int
 end
