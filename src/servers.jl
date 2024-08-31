@@ -141,7 +141,7 @@ function start_app_server(test_config)
 
         for (i, waiting_client_slot) in enumerate(app_server_state.waiting_room)
             if waiting_client_slot.is_used
-                if (game_state.frame_number > waiting_client_slot.last_challenge_sent_frame) && (game_state.frame_number - waiting_client_slot.last_challenge_sent_frame > (challenge_delay * game_state.target_frame_rate) ÷ 10 ^ 9)
+                if game_state.frame_number - waiting_client_slot.last_challenge_sent_frame > (challenge_delay * game_state.target_frame_rate) ÷ 10 ^ 9
                     challenge_token_info = ChallengeTokenInfo(app_server_state.challenge_token_sequence_number, waiting_client_slot.client_id, waiting_client_slot.user_data, challenge_token_key)
                     app_server_state.challenge_token_sequence_number += 1
 
@@ -272,7 +272,7 @@ function start_client(test_config)
         end
 
         # send connection request packet when possible
-        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_number > client_state.last_connection_request_packet_sent_frame) && (game_state.frame_number - client_state.last_connection_request_packet_sent_frame > (connection_request_packet_wait_time * game_state.target_frame_rate) ÷ 10 ^ 9)
+        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_number - client_state.last_connection_request_packet_sent_frame > (connection_request_packet_wait_time * game_state.target_frame_rate) ÷ 10 ^ 9)
             connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet)
 
             data = get_serialized_data(connection_request_packet)
