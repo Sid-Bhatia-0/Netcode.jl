@@ -111,24 +111,24 @@ function start_app_server(test_config)
     game_state = GameState(target_frame_rate, total_frames)
 
     while game_state.frame_number <= game_state.total_frames
-        frame_start_time = time_ns()
+        game_state.frame_start_time = time_ns()
 
         if game_state.frame_number == 1
-            game_state.game_start_time = frame_start_time
+            game_state.game_start_time = game_state.frame_start_time
         end
 
         frame_debug_info = FrameDebugInfo()
         push!(DEBUG_INFO.frame_debug_infos, frame_debug_info)
 
         frame_debug_info.frame_number = game_state.frame_number
-        frame_debug_info.frame_start_time = frame_start_time
+        frame_debug_info.frame_start_time = game_state.frame_start_time
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
             @info "Progress" game_state.frame_number
         end
 
         if game_state.frame_number > 1
-            DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_start_time
+            DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_start_time
         end
 
         num_cleaned_up_waiting_room = clean_up!(app_server_state.waiting_room, game_state.frame_number, game_state.target_frame_rate)
@@ -138,7 +138,7 @@ function start_app_server(test_config)
             client_netcode_address, data = take!(app_server_state.packet_receive_channel)
             push!(frame_debug_info.packets_received, (client_netcode_address, copy(data)))
 
-            handle_packet!(app_server_state, client_netcode_address, data, game_state.frame_number, frame_start_time)
+            handle_packet!(app_server_state, client_netcode_address, data, game_state.frame_number, game_state.frame_start_time)
         end
 
         for (i, waiting_client_slot) in enumerate(app_server_state.waiting_room)
@@ -221,24 +221,24 @@ function start_client(test_config)
     connect_token_request_response = nothing
 
     while game_state.frame_number <= game_state.total_frames
-        frame_start_time = time_ns()
+        game_state.frame_start_time = time_ns()
 
         if game_state.frame_number == 1
-            game_state.game_start_time = frame_start_time
+            game_state.game_start_time = game_state.frame_start_time
         end
 
         frame_debug_info = FrameDebugInfo()
         push!(DEBUG_INFO.frame_debug_infos, frame_debug_info)
 
         frame_debug_info.frame_number = game_state.frame_number
-        frame_debug_info.frame_start_time = frame_start_time
+        frame_debug_info.frame_start_time = game_state.frame_start_time
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
             @info "Progress" game_state.frame_number
         end
 
         if game_state.frame_number > 1
-            DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_start_time
+            DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_start_time
         end
 
         # request connect token
@@ -269,7 +269,7 @@ function start_client(test_config)
         end
 
         # invalidate connect token when expired
-        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (frame_start_time >= client_state.connect_token_packet.expire_timestamp)
+        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_start_time >= client_state.connect_token_packet.expire_timestamp)
             @info "Connect token expired" game_state.frame_number
             client_state.connect_token_packet = nothing
             client_state.state_machine_state = CLIENT_STATE_CONNECT_TOKEN_EXPIRED
