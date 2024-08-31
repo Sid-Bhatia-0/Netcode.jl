@@ -42,7 +42,7 @@ FrameDebugInfo() = FrameDebugInfo(0, 0, 0, 0, 0, 0, 0, [], [])
 
 function GameState(target_frame_rate, total_frames)
     target_ns_per_frame = 1_000_000_000 ÷ target_frame_rate
-    return GameState(time_ns(), 1, 0, target_frame_rate, target_ns_per_frame, total_frames)
+    return GameState(0, 1, 0, target_frame_rate, target_ns_per_frame, total_frames)
 end
 
 function NetcodeAddress(address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}})
