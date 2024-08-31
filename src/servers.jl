@@ -9,7 +9,7 @@ function setup_packet_receive_channel_task(channel, socket)
     return task
 end
 
-function handle_packet!(app_server_state, client_netcode_address, data, frame_start_time)
+function handle_packet!(app_server_state, client_netcode_address, data, frame_number, frame_start_time)
     packet_size = length(data)
 
     if packet_size == 0
@@ -53,7 +53,7 @@ function handle_packet!(app_server_state, client_netcode_address, data, frame_st
 
         hmac_view = @view connection_request_packet.encrypted_private_connect_token_data[end - SIZE_OF_HMAC + 1 : end]
         hmac_hash = hash(hmac_view)
-        connect_token_slot = ConnectTokenSlot(time_ns(), hmac_hash, client_netcode_address)
+        connect_token_slot = ConnectTokenSlot(frame_number, hmac_hash, client_netcode_address)
 
         if !try_add!(app_server_state.used_connect_token_history, connect_token_slot)
             @info "Packet ignored: connect token already used by another `client_id` or `netcode_address`"
@@ -65,7 +65,7 @@ function handle_packet!(app_server_state, client_netcode_address, data, frame_st
             return nothing
         end
 
-        waiting_client_slot = WaitingClientSlot(true, client_netcode_address, private_connect_token.client_id, private_connect_token.user_data, time_ns(), 0, private_connect_token.timeout_seconds, private_connect_token.client_to_server_key, private_connect_token.server_to_client_key)
+        waiting_client_slot = WaitingClientSlot(true, client_netcode_address, private_connect_token.client_id, private_connect_token.user_data, frame_number, 0, private_connect_token.timeout_seconds, private_connect_token.client_to_server_key, private_connect_token.server_to_client_key)
 
         is_waiting_client_added = try_add!(app_server_state.waiting_room, waiting_client_slot)
 
@@ -136,7 +136,7 @@ function start_app_server(test_config)
             client_netcode_address, data = take!(app_server_state.packet_receive_channel)
             push!(frame_debug_info.packets_received, (client_netcode_address, copy(data)))
 
-            handle_packet!(app_server_state, client_netcode_address, data, frame_start_time)
+            handle_packet!(app_server_state, client_netcode_address, data, game_state.frame_number, frame_start_time)
         end
 
         for (i, waiting_client_slot) in enumerate(app_server_state.waiting_room)
