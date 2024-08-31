@@ -286,7 +286,7 @@ function start_client(test_config)
             packet_prefix = get_packet_prefix(data)
             packet_type = get_packet_type(packet_prefix)
             @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type
-            push!(frame_debug_info.packets_sent, (time_ns(), app_server_inet_address, copy(data)))
+            push!(frame_debug_info.packets_sent, (app_server_inet_address, copy(data)))
 
             client_state.last_connection_request_packet_sent_frame = game_state.frame_number
         end
