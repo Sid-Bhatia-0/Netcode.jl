@@ -9,7 +9,7 @@ function setup_packet_receive_channel_task(channel, socket)
     return task
 end
 
-function handle_packet!(app_server_state, client_netcode_address, data)
+function handle_packet!(app_server_state, client_netcode_address, data, frame_start_time)
     packet_size = length(data)
 
     if packet_size == 0
@@ -29,7 +29,7 @@ function handle_packet!(app_server_state, client_netcode_address, data)
 
         io = IOBuffer(data)
 
-        connection_request_packet = try_read(io, ConnectionRequestPacket, app_server_state.protocol_id)
+        connection_request_packet = try_read(io, ConnectionRequestPacket, app_server_state.protocol_id, frame_start_time)
         if isnothing(connection_request_packet)
             @info "Packet ignored: `try_read` returned `nothing`"
             return nothing
@@ -136,7 +136,7 @@ function start_app_server(test_config)
             client_netcode_address, data = take!(app_server_state.packet_receive_channel)
             push!(frame_debug_info.packets_received, (client_netcode_address, copy(data)))
 
-            handle_packet!(app_server_state, client_netcode_address, data)
+            handle_packet!(app_server_state, client_netcode_address, data, frame_start_time)
         end
 
         for (i, waiting_client_slot) in enumerate(app_server_state.waiting_room)
