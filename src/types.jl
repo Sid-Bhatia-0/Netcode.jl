@@ -57,6 +57,8 @@ mutable struct GameState
     target_frame_rate::Int
     target_ns_per_frame::Int
     max_frames::Int
+    raw_input_string::String
+    clean_input_string::String
 end
 
 mutable struct FrameDebugInfo

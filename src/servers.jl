@@ -126,6 +126,16 @@ function start_app_server(test_config)
             @info "Progress" game_state.frame_number
         end
 
+        game_state.raw_input_string = get_raw_input_string()
+
+        if game_state.raw_input_string == "p"
+            Debugger.@bp
+        elseif game_state.raw_input_string == "q"
+            break
+        end
+
+        game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
+
         if game_state.frame_number > 1
             DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
         end
@@ -240,6 +250,16 @@ function start_client(test_config)
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
             @info "Progress" game_state.frame_number
         end
+
+        game_state.raw_input_string = get_raw_input_string()
+
+        if game_state.raw_input_string == "p"
+            Debugger.@bp
+        elseif game_state.raw_input_string == "q"
+            break
+        end
+
+        game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
 
         if game_state.frame_number > 1
             DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
