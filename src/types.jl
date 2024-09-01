@@ -50,9 +50,17 @@ struct TestConfig
     client_password::String
 end
 
-mutable struct FrameDebugInfo
+mutable struct GameState
+    game_start_time::TYPE_OF_TIMESTAMP
     frame_number::Int
     frame_start_time::TYPE_OF_TIMESTAMP
+    target_frame_rate::Int
+    target_ns_per_frame::Int
+    total_frames::Int
+end
+
+mutable struct FrameDebugInfo
+    game_state::GameState
     frame_time::Int
     update_time_theoretical::Int
     update_time_observed::Int
@@ -67,15 +75,6 @@ struct DebugInfo
 end
 
 const DEBUG_INFO = DebugInfo(FrameDebugInfo[])
-
-mutable struct GameState
-    game_start_time::TYPE_OF_TIMESTAMP
-    frame_number::Int
-    frame_start_time::TYPE_OF_TIMESTAMP
-    target_frame_rate::Int
-    target_ns_per_frame::Int
-    total_frames::Int
-end
 
 struct NetcodeAddress
     address_type::TYPE_OF_ADDRESS_TYPE

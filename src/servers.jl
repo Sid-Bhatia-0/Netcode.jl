@@ -110,6 +110,8 @@ function start_app_server(test_config)
 
     game_state = GameState(target_frame_rate, total_frames)
 
+    frame_debug_info = FrameDebugInfo(game_state)
+
     while game_state.frame_number <= game_state.total_frames
         game_state.frame_start_time = time_ns()
 
@@ -117,18 +119,15 @@ function start_app_server(test_config)
             game_state.game_start_time = game_state.frame_start_time
         end
 
-        frame_debug_info = FrameDebugInfo()
         push!(DEBUG_INFO.frame_debug_infos, frame_debug_info)
-
-        frame_debug_info.frame_number = game_state.frame_number
-        frame_debug_info.frame_start_time = game_state.frame_start_time
+        @assert length(DEBUG_INFO.frame_debug_infos) == game_state.frame_number
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
             @info "Progress" game_state.frame_number
         end
 
         if game_state.frame_number > 1
-            DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_start_time
+            DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
         end
 
         num_cleaned_up_waiting_room = clean_up!(app_server_state.waiting_room, game_state.frame_number, game_state.target_frame_rate)
@@ -180,11 +179,13 @@ function start_app_server(test_config)
 
         sleep_to_achieve_target_frame_rate!(game_state)
 
+        DEBUG_INFO.frame_debug_infos[game_state.frame_number] = deepcopy(DEBUG_INFO.frame_debug_infos[game_state.frame_number])
+
         game_state.frame_number = game_state.frame_number + 1
     end
 
     game_end_time = time_ns()
-    DEBUG_INFO.frame_debug_infos[end].frame_time = game_end_time - DEBUG_INFO.frame_debug_infos[end].frame_start_time
+    DEBUG_INFO.frame_debug_infos[end].frame_time = game_end_time - DEBUG_INFO.frame_debug_infos[end].game_state.frame_start_time
 
     summarize_debug_info(DEBUG_INFO)
 
@@ -218,6 +219,8 @@ function start_client(test_config)
 
     game_state = GameState(target_frame_rate, total_frames)
 
+    frame_debug_info = FrameDebugInfo(game_state)
+
     connect_token_request_response = nothing
 
     while game_state.frame_number <= game_state.total_frames
@@ -227,18 +230,15 @@ function start_client(test_config)
             game_state.game_start_time = game_state.frame_start_time
         end
 
-        frame_debug_info = FrameDebugInfo()
         push!(DEBUG_INFO.frame_debug_infos, frame_debug_info)
-
-        frame_debug_info.frame_number = game_state.frame_number
-        frame_debug_info.frame_start_time = game_state.frame_start_time
+        @assert length(DEBUG_INFO.frame_debug_infos) == game_state.frame_number
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
             @info "Progress" game_state.frame_number
         end
 
         if game_state.frame_number > 1
-            DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_start_time
+            DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
         end
 
         # request connect token
@@ -299,11 +299,13 @@ function start_client(test_config)
 
         sleep_to_achieve_target_frame_rate!(game_state)
 
+        DEBUG_INFO.frame_debug_infos[game_state.frame_number] = deepcopy(DEBUG_INFO.frame_debug_infos[game_state.frame_number])
+
         game_state.frame_number = game_state.frame_number + 1
     end
 
     game_end_time = time_ns()
-    DEBUG_INFO.frame_debug_infos[end].frame_time = game_end_time - DEBUG_INFO.frame_debug_infos[end].frame_start_time
+    DEBUG_INFO.frame_debug_infos[end].frame_time = game_end_time - DEBUG_INFO.frame_debug_infos[end].game_state.frame_start_time
 
     summarize_debug_info(DEBUG_INFO)
 
