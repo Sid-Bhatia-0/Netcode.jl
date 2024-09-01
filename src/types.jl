@@ -13,7 +13,7 @@ mutable struct DebugInfoTest
     frame_debug_infos::Vector{FrameDebugInfoTest}
 end
 
-mutable struct ReplayManager
+mutable struct ReplayManagerTest
     replay_file_save::Union{Nothing, String}
     replay_file_load::Union{Nothing, String}
     io_replay_file_save::Union{Nothing, IO}

@@ -207,7 +207,7 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
 
     frame_debug_info = FrameDebugInfoTest(game_state)
 
-    replay_manager = ReplayManager(;
+    replay_manager = ReplayManagerTest(;
         replay_file_save = replay_file_save,
         replay_file_load = replay_file_load,
         frame_number_load_reset = frame_number_load_reset,

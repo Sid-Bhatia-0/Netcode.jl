@@ -1,4 +1,4 @@
-function ReplayManager(; replay_file_save = nothing, replay_file_load = nothing, frame_number_load_reset = nothing)
+function ReplayManagerTest(; replay_file_save = nothing, replay_file_load = nothing, frame_number_load_reset = nothing)
     if !isnothing(frame_number_load_reset)
         @assert !isnothing(replay_file_load)
     end
@@ -27,7 +27,7 @@ function ReplayManager(; replay_file_save = nothing, replay_file_load = nothing,
         is_replay_input = false
     end
 
-    return ReplayManager(
+    return ReplayManagerTest(
         replay_file_save,
         replay_file_load,
         io_replay_file_save,
