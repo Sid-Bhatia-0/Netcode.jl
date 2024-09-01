@@ -200,10 +200,6 @@ function start_app_server(test_config)
 
     summarize_debug_info(DEBUG_INFO)
 
-    if !isnothing(save_debug_info_file)
-        Serialization.serialize(save_debug_info_file, DEBUG_INFO)
-    end
-
     return nothing
 end
 
@@ -330,10 +326,6 @@ function start_client(test_config)
     end
 
     summarize_debug_info(DEBUG_INFO)
-
-    if !isnothing(save_debug_info_file)
-        Serialization.serialize(save_debug_info_file, DEBUG_INFO)
-    end
 
     return nothing
 end
