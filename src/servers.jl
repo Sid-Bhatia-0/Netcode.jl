@@ -95,7 +95,7 @@ function start_app_server(test_config)
     waiting_room_size = test_config.waiting_room_size
     used_connect_token_history_size = test_config.used_connect_token_history_size
     target_frame_rate = test_config.target_frame_rate
-    total_frames = test_config.total_frames
+    max_frames = test_config.max_frames
     challenge_delay = test_config.challenge_delay
     challenge_token_key = test_config.challenge_token_key
     save_debug_info_file = test_config.server_save_debug_info_file
@@ -108,7 +108,7 @@ function start_app_server(test_config)
 
     setup_packet_receive_channel_task(app_server_state.packet_receive_channel, app_server_state.socket)
 
-    game_state = GameState(target_frame_rate, total_frames)
+    game_state = GameState(target_frame_rate, max_frames)
 
     frame_debug_info = FrameDebugInfo(game_state)
 
@@ -181,7 +181,7 @@ function start_app_server(test_config)
 
         DEBUG_INFO.frame_debug_infos[game_state.frame_number] = deepcopy(DEBUG_INFO.frame_debug_infos[game_state.frame_number])
 
-        if game_state.frame_number >= game_state.total_frames
+        if game_state.frame_number >= game_state.max_frames
             break
         end
 
@@ -209,7 +209,7 @@ function start_client(test_config)
     protocol_id = test_config.protocol_id
     packet_receive_channel_size = test_config.packet_receive_channel_size
     target_frame_rate = test_config.target_frame_rate
-    total_frames = test_config.total_frames
+    max_frames = test_config.max_frames
     connect_token_request_frame = test_config.connect_token_request_frame
     connection_request_packet_wait_time = test_config.connection_request_packet_wait_time
     save_debug_info_file = test_config.client_save_debug_info_file
@@ -221,7 +221,7 @@ function start_client(test_config)
 
     setup_packet_receive_channel_task(client_state.packet_receive_channel, client_state.socket)
 
-    game_state = GameState(target_frame_rate, total_frames)
+    game_state = GameState(target_frame_rate, max_frames)
 
     frame_debug_info = FrameDebugInfo(game_state)
 
@@ -305,7 +305,7 @@ function start_client(test_config)
 
         DEBUG_INFO.frame_debug_infos[game_state.frame_number] = deepcopy(DEBUG_INFO.frame_debug_infos[game_state.frame_number])
 
-        if game_state.frame_number >= game_state.total_frames
+        if game_state.frame_number >= game_state.max_frames
             break
         end
 

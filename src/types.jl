@@ -39,7 +39,7 @@ struct TestConfig
     user_data::DF.DataFrame
     packet_receive_channel_size::Int
     target_frame_rate::Int
-    total_frames::Int
+    max_frames::Int
     connect_token_request_frame::Int
     challenge_delay::Int
     connection_request_packet_wait_time::Int
@@ -56,7 +56,7 @@ mutable struct GameState
     frame_start_time::TYPE_OF_TIMESTAMP
     target_frame_rate::Int
     target_ns_per_frame::Int
-    total_frames::Int
+    max_frames::Int
 end
 
 mutable struct FrameDebugInfo

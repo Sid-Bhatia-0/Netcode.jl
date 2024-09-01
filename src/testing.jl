@@ -31,7 +31,7 @@ function TestConfig()
     packet_receive_channel_size = 32
 
     target_frame_rate = 60
-    total_frames = target_frame_rate * 30
+    max_frames = target_frame_rate * 30
 
     connect_token_request_frame = 5 * target_frame_rate
 
@@ -63,7 +63,7 @@ function TestConfig()
         user_data,
         packet_receive_channel_size,
         target_frame_rate,
-        total_frames,
+        max_frames,
         connect_token_request_frame,
         challenge_delay,
         connection_request_packet_wait_time,
