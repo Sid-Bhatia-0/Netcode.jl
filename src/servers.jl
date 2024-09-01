@@ -198,9 +198,6 @@ function start_app_server(test_config)
         game_state.frame_number = game_state.frame_number + 1
     end
 
-    game_end_time = time_ns()
-    DEBUG_INFO.frame_debug_infos[end].frame_time = game_end_time - DEBUG_INFO.frame_debug_infos[end].game_state.frame_start_time
-
     summarize_debug_info(DEBUG_INFO)
 
     if !isnothing(save_debug_info_file)
@@ -331,9 +328,6 @@ function start_client(test_config)
 
         game_state.frame_number = game_state.frame_number + 1
     end
-
-    game_end_time = time_ns()
-    DEBUG_INFO.frame_debug_infos[end].frame_time = game_end_time - DEBUG_INFO.frame_debug_infos[end].game_state.frame_start_time
 
     summarize_debug_info(DEBUG_INFO)
 
