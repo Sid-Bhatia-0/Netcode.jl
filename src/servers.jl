@@ -112,7 +112,7 @@ function start_app_server(test_config)
 
     frame_debug_info = FrameDebugInfo(game_state)
 
-    while game_state.frame_number <= game_state.total_frames
+    while true
         game_state.frame_start_time = time_ns()
 
         if game_state.frame_number == 1
@@ -181,6 +181,10 @@ function start_app_server(test_config)
 
         DEBUG_INFO.frame_debug_infos[game_state.frame_number] = deepcopy(DEBUG_INFO.frame_debug_infos[game_state.frame_number])
 
+        if game_state.frame_number >= game_state.total_frames
+            break
+        end
+
         game_state.frame_number = game_state.frame_number + 1
     end
 
@@ -223,7 +227,7 @@ function start_client(test_config)
 
     connect_token_request_response = nothing
 
-    while game_state.frame_number <= game_state.total_frames
+    while true
         game_state.frame_start_time = time_ns()
 
         if game_state.frame_number == 1
@@ -300,6 +304,10 @@ function start_client(test_config)
         sleep_to_achieve_target_frame_rate!(game_state)
 
         DEBUG_INFO.frame_debug_infos[game_state.frame_number] = deepcopy(DEBUG_INFO.frame_debug_infos[game_state.frame_number])
+
+        if game_state.frame_number >= game_state.total_frames
+            break
+        end
 
         game_state.frame_number = game_state.frame_number + 1
     end
