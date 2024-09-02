@@ -85,8 +85,6 @@ function handle_packet!(app_server_state, client_netcode_address, data, frame_nu
 end
 
 function start_app_server(test_config)
-    empty!(DEBUG_INFO.frame_debug_infos)
-
     protocol_id = test_config.protocol_id
     server_side_shared_key = test_config.server_side_shared_key
     app_server_inet_address = test_config.app_server_address
@@ -112,6 +110,13 @@ function start_app_server(test_config)
 
     frame_debug_info = FrameDebugInfo(game_state)
 
+    reset!(
+        REPLAY_MANAGER,
+        replay_file_save = test_config.replay_file_save,
+        replay_file_load = test_config.replay_file_load,
+        frame_number_load_reset = test_config.frame_number_load_reset,
+    )
+
     while true
         game_state.frame_start_time = time_ns()
 
@@ -119,8 +124,8 @@ function start_app_server(test_config)
             game_state.game_start_time = game_state.frame_start_time
         end
 
-        push!(DEBUG_INFO.frame_debug_infos, frame_debug_info)
-        @assert length(DEBUG_INFO.frame_debug_infos) == game_state.frame_number
+        push!(REPLAY_MANAGER.debug_info_save.frame_debug_infos, frame_debug_info)
+        @assert length(REPLAY_MANAGER.debug_info_save.frame_debug_infos) == game_state.frame_number
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
             @info "Progress" game_state.frame_number
@@ -137,7 +142,7 @@ function start_app_server(test_config)
         game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
 
         if game_state.frame_number > 1
-            DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
+            REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
         end
 
         num_cleaned_up_waiting_room = clean_up!(app_server_state.waiting_room, game_state.frame_number, game_state.target_frame_rate)
@@ -189,7 +194,7 @@ function start_app_server(test_config)
 
         sleep_to_achieve_target_frame_rate!(game_state)
 
-        DEBUG_INFO.frame_debug_infos[game_state.frame_number] = deepcopy(DEBUG_INFO.frame_debug_infos[game_state.frame_number])
+        REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number] = deepcopy(REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number])
 
         if game_state.frame_number >= game_state.max_frames
             break
@@ -198,14 +203,12 @@ function start_app_server(test_config)
         game_state.frame_number = game_state.frame_number + 1
     end
 
-    summarize_debug_info(DEBUG_INFO)
+    summarize_debug_info(REPLAY_MANAGER.debug_info_save)
 
     return nothing
 end
 
 function start_client(test_config)
-    empty!(DEBUG_INFO.frame_debug_infos)
-
     auth_server_address = test_config.auth_server_address
     username = test_config.client_username
     password = test_config.client_password
@@ -228,6 +231,13 @@ function start_client(test_config)
 
     frame_debug_info = FrameDebugInfo(game_state)
 
+    reset!(
+        REPLAY_MANAGER,
+        replay_file_save = test_config.replay_file_save,
+        replay_file_load = test_config.replay_file_load,
+        frame_number_load_reset = test_config.frame_number_load_reset,
+    )
+
     connect_token_request_response = nothing
 
     while true
@@ -237,8 +247,8 @@ function start_client(test_config)
             game_state.game_start_time = game_state.frame_start_time
         end
 
-        push!(DEBUG_INFO.frame_debug_infos, frame_debug_info)
-        @assert length(DEBUG_INFO.frame_debug_infos) == game_state.frame_number
+        push!(REPLAY_MANAGER.debug_info_save.frame_debug_infos, frame_debug_info)
+        @assert length(REPLAY_MANAGER.debug_info_save.frame_debug_infos) == game_state.frame_number
 
         if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
             @info "Progress" game_state.frame_number
@@ -255,7 +265,7 @@ function start_client(test_config)
         game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
 
         if game_state.frame_number > 1
-            DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - DEBUG_INFO.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
+            REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
         end
 
         # request connect token
@@ -316,7 +326,7 @@ function start_client(test_config)
 
         sleep_to_achieve_target_frame_rate!(game_state)
 
-        DEBUG_INFO.frame_debug_infos[game_state.frame_number] = deepcopy(DEBUG_INFO.frame_debug_infos[game_state.frame_number])
+        REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number] = deepcopy(REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number])
 
         if game_state.frame_number >= game_state.max_frames
             break
@@ -325,7 +335,7 @@ function start_client(test_config)
         game_state.frame_number = game_state.frame_number + 1
     end
 
-    summarize_debug_info(DEBUG_INFO)
+    summarize_debug_info(REPLAY_MANAGER.debug_info_save)
 
     return nothing
 end
@@ -366,8 +376,6 @@ function auth_handler(request, df_user_data, protocol_id, timeout_seconds, conne
 end
 
 function start_auth_server(test_config)
-    empty!(DEBUG_INFO.frame_debug_infos)
-
     auth_server_address = test_config.auth_server_address
     df_user_data = test_config.user_data
     protocol_id = test_config.protocol_id

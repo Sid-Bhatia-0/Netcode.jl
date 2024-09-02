@@ -38,6 +38,44 @@ function ReplayManagerTest(; replay_file_save = nothing, replay_file_load = noth
     )
 end
 
+function reset!(replay_manager::ReplayManager; replay_file_save = nothing, replay_file_load = nothing, frame_number_load_reset = nothing)
+    if !isnothing(frame_number_load_reset)
+        @assert !isnothing(replay_file_load)
+    end
+
+    if !isnothing(replay_file_save) && !isnothing(replay_file_load)
+        @assert replay_file_save != replay_file_load
+    end
+
+    if !isnothing(replay_file_save)
+        io_replay_file_save = open(replay_file_save, "w")
+    else
+        io_replay_file_save = nothing
+    end
+
+    if !isnothing(replay_file_load)
+        debug_info_load = load_replay_file(replay_file_load)
+        is_replay_input = true
+
+        if !isnothing(frame_number_load_reset)
+            @assert frame_number_load_reset in 1 : length(debug_info_load.frame_debug_infos)
+        end
+    else
+        debug_info_load = nothing
+        is_replay_input = false
+    end
+
+    replay_manager.replay_file_save = replay_file_save
+    replay_manager.replay_file_load = replay_file_load
+    replay_manager.io_replay_file_save = io_replay_file_save
+    empty!(replay_manager.debug_info_save.frame_debug_infos)
+    replay_manager.debug_info_load = debug_info_load
+    replay_manager.is_replay_input = is_replay_input
+    replay_manager.frame_number_load_reset = frame_number_load_reset
+
+    return nothing
+end
+
 FrameDebugInfo(game_state) = FrameDebugInfo(game_state, 0, 0, 0, 0, 0, [], [])
 
 function GameState(target_frame_rate, max_frames)

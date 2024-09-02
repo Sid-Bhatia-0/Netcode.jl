@@ -47,6 +47,10 @@ function TestConfig()
     client_username = "user1"
     client_password = "password1"
 
+    replay_file_save = nothing
+    replay_file_load = nothing
+    frame_number_load_reset = nothing
+
     return TestConfig(
         protocol_id,
         rng,
@@ -72,6 +76,9 @@ function TestConfig()
         server_save_debug_info_file,
         client_username,
         client_password,
+        replay_file_save,
+        replay_file_load,
+        frame_number_load_reset,
     )
 end
 

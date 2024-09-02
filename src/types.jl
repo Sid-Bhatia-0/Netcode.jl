@@ -48,6 +48,9 @@ struct TestConfig
     server_save_debug_info_file::Union{Nothing, String}
     client_username::String
     client_password::String
+    replay_file_save::Union{Nothing, String}
+    replay_file_load::Union{Nothing, String}
+    frame_number_load_reset::Union{Nothing, Int}
 end
 
 mutable struct GameState
@@ -76,7 +79,27 @@ struct DebugInfo
     frame_debug_infos::Vector{FrameDebugInfo}
 end
 
-const DEBUG_INFO = DebugInfo(FrameDebugInfo[])
+mutable struct ReplayManager
+    replay_file_save::Union{Nothing, String}
+    replay_file_load::Union{Nothing, String}
+    io_replay_file_save::Union{Nothing, IO}
+    debug_info_save::DebugInfo
+    debug_info_load::Union{Nothing, DebugInfo}
+    is_replay_input::Union{Nothing, Bool}
+    frame_number_load_reset::Union{Nothing, Int}
+end
+
+ReplayManager() = ReplayManager(
+    nothing,
+    nothing,
+    nothing,
+    DebugInfo(FrameDebugInfo[]),
+    nothing,
+    nothing,
+    nothing,
+)
+
+const REPLAY_MANAGER = ReplayManager()
 
 struct NetcodeAddress
     address_type::TYPE_OF_ADDRESS_TYPE
