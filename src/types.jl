@@ -73,6 +73,8 @@ mutable struct FrameDebugInfo
     sleep_time_observed::Int
     packets_received::Vector{Any}
     packets_sent::Vector{Any}
+    app_server_state::Any
+    client_state::Any
 end
 
 struct DebugInfo

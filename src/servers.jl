@@ -108,7 +108,7 @@ function start_app_server(test_config)
 
     game_state = GameState(target_frame_rate, max_frames)
 
-    frame_debug_info = FrameDebugInfo(game_state)
+    frame_debug_info = FrameDebugInfo(game_state, app_server_state, nothing)
 
     reset!(
         REPLAY_MANAGER,
@@ -229,7 +229,7 @@ function start_client(test_config)
 
     game_state = GameState(target_frame_rate, max_frames)
 
-    frame_debug_info = FrameDebugInfo(game_state)
+    frame_debug_info = FrameDebugInfo(game_state, nothing, client_state)
 
     reset!(
         REPLAY_MANAGER,

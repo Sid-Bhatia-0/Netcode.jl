@@ -76,7 +76,7 @@ function reset!(replay_manager::ReplayManager; replay_file_save = nothing, repla
     return nothing
 end
 
-FrameDebugInfo(game_state) = FrameDebugInfo(game_state, 0, 0, 0, 0, 0, [], [])
+FrameDebugInfo(game_state, app_server_state, client_state) = FrameDebugInfo(game_state, 0, 0, 0, 0, 0, [], [], app_server_state, client_state)
 
 function GameState(target_frame_rate, max_frames)
     target_ns_per_frame = 1_000_000_000 ÷ target_frame_rate
