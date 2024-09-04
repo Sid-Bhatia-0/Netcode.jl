@@ -112,9 +112,9 @@ function start_app_server(test_config)
 
     reset!(
         REPLAY_MANAGER,
-        replay_file_save = test_config.replay_file_save,
-        replay_file_load = test_config.replay_file_load,
-        frame_number_load_reset = test_config.frame_number_load_reset,
+        replay_file_save = test_config.replay_file_save_server,
+        replay_file_load = test_config.replay_file_load_server,
+        frame_number_load_reset = test_config.frame_number_load_reset_server,
     )
 
     while true
@@ -196,6 +196,8 @@ function start_app_server(test_config)
 
         REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number] = deepcopy(REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number])
 
+        save_frame_maybe!(REPLAY_MANAGER)
+
         if game_state.frame_number >= game_state.max_frames
             break
         end
@@ -233,9 +235,9 @@ function start_client(test_config)
 
     reset!(
         REPLAY_MANAGER,
-        replay_file_save = test_config.replay_file_save,
-        replay_file_load = test_config.replay_file_load,
-        frame_number_load_reset = test_config.frame_number_load_reset,
+        replay_file_save = test_config.replay_file_save_client,
+        replay_file_load = test_config.replay_file_load_client,
+        frame_number_load_reset = test_config.frame_number_load_reset_client,
     )
 
     connect_token_request_response = nothing
@@ -327,6 +329,8 @@ function start_client(test_config)
         sleep_to_achieve_target_frame_rate!(game_state)
 
         REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number] = deepcopy(REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number])
+
+        save_frame_maybe!(REPLAY_MANAGER)
 
         if game_state.frame_number >= game_state.max_frames
             break

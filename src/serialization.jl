@@ -336,3 +336,13 @@ function try_read(io::IO, ::Type{PrivateConnectToken})
         user_data,
     )
 end
+
+function save_frame_maybe!(replay_manager::ReplayManager)
+    if !isnothing(replay_manager.replay_file_save)
+        @assert length(replay_manager.debug_info_save.frame_debug_infos) == replay_manager.debug_info_save.frame_debug_infos[end].game_state.frame_number
+        Serialization.serialize(replay_manager.io_replay_file_save, replay_manager.debug_info_save.frame_debug_infos[end])
+        flush(replay_manager.io_replay_file_save)
+    end
+
+    return nothing
+end

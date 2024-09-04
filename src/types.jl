@@ -48,9 +48,12 @@ struct TestConfig
     server_save_debug_info_file::Union{Nothing, String}
     client_username::String
     client_password::String
-    replay_file_save::Union{Nothing, String}
-    replay_file_load::Union{Nothing, String}
-    frame_number_load_reset::Union{Nothing, Int}
+    replay_file_save_client::Union{Nothing, String}
+    replay_file_load_client::Union{Nothing, String}
+    frame_number_load_reset_client::Union{Nothing, Int}
+    replay_file_save_server::Union{Nothing, String}
+    replay_file_load_server::Union{Nothing, String}
+    frame_number_load_reset_server::Union{Nothing, Int}
 end
 
 mutable struct GameState
