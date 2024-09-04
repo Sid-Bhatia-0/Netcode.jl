@@ -346,3 +346,21 @@ function save_frame_maybe!(replay_manager::ReplayManager)
 
     return nothing
 end
+
+function load_replay_file!(debug_info_load::DebugInfo, replay_file)
+    io = open(replay_file, "r")
+
+    i = 1
+
+    while !eof(io)
+        frame_debug_info_load = Serialization.deserialize(io)
+
+        @assert frame_debug_info_load.game_state.frame_number == i
+
+        push!(debug_info_load.frame_debug_infos, frame_debug_info_load)
+
+        i += 1
+    end
+
+    return nothing
+end

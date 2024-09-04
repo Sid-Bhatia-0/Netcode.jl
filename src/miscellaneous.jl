@@ -54,7 +54,9 @@ function reset!(replay_manager::ReplayManager; replay_file_save = nothing, repla
     end
 
     if !isnothing(replay_file_load)
-        debug_info_load = load_replay_file(replay_file_load)
+        debug_info_load = DebugInfo(FrameDebugInfo[])
+        load_replay_file!(debug_info_load, replay_file_load)
+
         is_replay_input = true
 
         if !isnothing(frame_number_load_reset)
