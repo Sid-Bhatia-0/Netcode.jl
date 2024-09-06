@@ -362,5 +362,7 @@ function load_replay_file!(debug_info_load::DebugInfo, replay_file)
         i += 1
     end
 
+    close(io)
+
     return nothing
 end

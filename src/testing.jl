@@ -152,6 +152,8 @@ function load_replay_file(replay_file)
         i += 1
     end
 
+    close(io)
+
     return debug_info_load
 end
 
