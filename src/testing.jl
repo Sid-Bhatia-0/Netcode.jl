@@ -41,9 +41,6 @@ function TestConfig()
 
     challenge_token_key = rand(rng, UInt8, SIZE_OF_KEY)
 
-    client_save_debug_info_file = "client_save_debug_info.debug"
-    server_save_debug_info_file = "server_save_debug_info.debug"
-
     client_username = "user1"
     client_password = "password1"
 
@@ -76,8 +73,6 @@ function TestConfig()
         challenge_delay,
         connection_request_packet_wait_time,
         challenge_token_key,
-        client_save_debug_info_file,
-        server_save_debug_info_file,
         client_username,
         client_password,
         replay_file_save_client,

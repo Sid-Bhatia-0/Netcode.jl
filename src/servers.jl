@@ -96,7 +96,6 @@ function start_app_server(test_config)
     max_frames = test_config.max_frames
     challenge_delay = test_config.challenge_delay
     challenge_token_key = test_config.challenge_token_key
-    save_debug_info_file = test_config.server_save_debug_info_file
 
     app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, room_size, waiting_room_size, used_connect_token_history_size)
 
@@ -224,7 +223,6 @@ function start_client(test_config)
     max_frames = test_config.max_frames
     connect_token_request_frame = test_config.connect_token_request_frame
     connection_request_packet_wait_time = test_config.connection_request_packet_wait_time
-    save_debug_info_file = test_config.client_save_debug_info_file
 
     hashed_password = bytes2hex(SHA.sha3_256(password))
     auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)

@@ -44,8 +44,6 @@ struct TestConfig
     challenge_delay::Int
     connection_request_packet_wait_time::Int
     challenge_token_key::Vector{UInt8}
-    client_save_debug_info_file::Union{Nothing, String}
-    server_save_debug_info_file::Union{Nothing, String}
     client_username::String
     client_password::String
     replay_file_save_client::Union{Nothing, String}
