@@ -205,6 +205,10 @@ function start_app_server(test_config)
         game_state.frame_number = game_state.frame_number + 1
     end
 
+    if !isnothing(REPLAY_MANAGER.io_replay_file_save)
+        close(REPLAY_MANAGER.io_replay_file_save)
+    end
+
     summarize_debug_info(REPLAY_MANAGER.debug_info_save)
 
     return nothing
@@ -337,6 +341,10 @@ function start_client(test_config)
         end
 
         game_state.frame_number = game_state.frame_number + 1
+    end
+
+    if !isnothing(REPLAY_MANAGER.io_replay_file_save)
+        close(REPLAY_MANAGER.io_replay_file_save)
     end
 
     summarize_debug_info(REPLAY_MANAGER.debug_info_save)
