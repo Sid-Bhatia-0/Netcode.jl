@@ -6,6 +6,7 @@ import DataFrames as DF
 import Debugger
 import GarishPrint as GP
 import HTTP
+import JuliaInterpreter as JI
 import Logging
 import LoggingExtras as LE
 import Random
