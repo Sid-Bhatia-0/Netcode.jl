@@ -98,6 +98,7 @@ function start_app_server(test_config)
     challenge_token_key = test_config.challenge_token_key
 
     app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, room_size, waiting_room_size, used_connect_token_history_size)
+    client_state = nothing
 
     @info "Server started listening"
 
@@ -196,6 +197,7 @@ function start_app_server(test_config)
         REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number] = deepcopy(REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number])
 
         save_frame_maybe!(REPLAY_MANAGER)
+        load_frame_maybe!(game_state, app_server_state, client_state, REPLAY_MANAGER)
 
         if game_state.frame_number >= game_state.max_frames
             break
@@ -228,6 +230,7 @@ function start_client(test_config)
     auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)
 
     client_state = ClientState(protocol_id, packet_receive_channel_size)
+    app_server_state = nothing
 
     setup_packet_receive_channel_task(client_state.packet_receive_channel, client_state.socket)
 
@@ -333,6 +336,7 @@ function start_client(test_config)
         REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number] = deepcopy(REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number])
 
         save_frame_maybe!(REPLAY_MANAGER)
+        load_frame_maybe!(game_state, app_server_state, client_state, REPLAY_MANAGER)
 
         if game_state.frame_number >= game_state.max_frames
             break

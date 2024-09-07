@@ -366,3 +366,97 @@ function load_replay_file!(debug_info_load::DebugInfo, replay_file)
 
     return nothing
 end
+
+function load_frame!(game_state::GameState, frame_debug_info_load::FrameDebugInfo)
+    game_state.game_start_time = frame_debug_info_load.game_state.game_start_time
+    game_state.frame_number = frame_debug_info_load.game_state.frame_number
+    game_state.frame_start_time = frame_debug_info_load.game_state.frame_start_time
+    game_state.target_frame_rate = frame_debug_info_load.game_state.target_frame_rate
+    game_state.target_ns_per_frame = frame_debug_info_load.game_state.target_ns_per_frame
+    game_state.max_frames = frame_debug_info_load.game_state.max_frames
+    game_state.clean_input_string = frame_debug_info_load.game_state.clean_input_string
+
+    return nothing
+end
+
+function load_frame!(app_server_state::AppServerState, frame_debug_info_load::FrameDebugInfo)
+    app_server_state.protocol_id = frame_debug_info_load.app_server_state.protocol_id
+    app_server_state.server_side_shared_key = copy(frame_debug_info_load.app_server_state.server_side_shared_key)
+    app_server_state.netcode_address = frame_debug_info_load.app_server_state.netcode_address
+
+    while !isempty(app_server_state.packet_receive_channel)
+        take!(app_server_state.packet_receive_channel)
+    end
+
+    for (client_netcode_address, data) in frame_debug_info_load.packets_received
+        put!(app_server_state.packet_receive_channel, (client_netcode_address, copy(data)))
+    end
+
+    app_server_state.room = deepcopy(frame_debug_info_load.app_server_state.room)
+    app_server_state.num_occupied_room = frame_debug_info_load.app_server_state.num_occupied_room
+    app_server_state.waiting_room = deepcopy(frame_debug_info_load.app_server_state.waiting_room)
+    app_server_state.num_occupied_waiting_room = frame_debug_info_load.app_server_state.num_occupied_waiting_room
+    app_server_state.used_connect_token_history = deepcopy(frame_debug_info_load.app_server_state.used_connect_token_history)
+    app_server_state.packet_sequence_number = frame_debug_info_load.app_server_state.packet_sequence_number
+    app_server_state.challenge_token_sequence_number = frame_debug_info_load.app_server_state.challenge_token_sequence_number
+
+    return nothing
+end
+
+function load_frame!(client_state::ClientState, frame_debug_info_load::FrameDebugInfo)
+    client_state.protocol_id = frame_debug_info_load.client_state.protocol_id
+
+    while !isempty(client_state.packet_receive_channel)
+        take!(client_state.packet_receive_channel)
+    end
+
+    for (app_server_netcode_address, data) in frame_debug_info_load.packets_received
+        put!(client_state.packet_receive_channel, (app_server_netcode_address, copy(data)))
+    end
+
+    client_state.state_machine_state = frame_debug_info_load.client_state.state_machine_state
+    client_state.connect_token_packet = frame_debug_info_load.client_state.connect_token_packet
+    client_state.last_connection_request_packet_sent_frame = frame_debug_info_load.client_state.last_connection_request_packet_sent_frame
+
+    return nothing
+end
+
+function load_frame_maybe!(game_state, app_server_state, client_state, replay_manager::ReplayManager)
+    if !isnothing(replay_manager.replay_file_load) && !isnothing(replay_manager.frame_number_load_reset)
+        frame_debug_info_load = replay_manager.debug_info_load.frame_debug_infos[replay_manager.frame_number_load_reset]
+
+        load_frame!(game_state, frame_debug_info_load)
+
+        if !isnothing(app_server_state)
+            load_frame!(app_server_state, frame_debug_info_load)
+        end
+
+        if !isnothing(client_state)
+            load_frame!(client_state, frame_debug_info_load)
+        end
+
+        # resetting and updating debug info save
+        empty!(replay_manager.debug_info_save.frame_debug_infos)
+        for i in 1 : replay_manager.frame_number_load_reset
+            push!(replay_manager.debug_info_save.frame_debug_infos, deepcopy(replay_manager.debug_info_load.frame_debug_infos[i]))
+        end
+
+        if !isnothing(replay_manager.replay_file_save)
+            close(replay_manager.io_replay_file_save)
+
+            replay_manager.io_replay_file_save = open(replay_manager.replay_file_save, "w")
+
+            for i in 1 : replay_manager.frame_number_load_reset
+                Serialization.serialize(replay_manager.io_replay_file_save, replay_manager.debug_info_save.frame_debug_infos[i])
+            end
+
+            flush(replay_manager.io_replay_file_save)
+        end
+
+        replay_manager.frame_number_load_reset = nothing # you don't want to keep loading the same frame again and again
+
+        Debugger.@bp
+    end
+
+    return nothing
+end
