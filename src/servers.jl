@@ -120,6 +120,8 @@ function start_app_server(test_config)
     while true
         game_state.frame_start_time = time_ns()
 
+        reset!(frame_debug_info)
+
         if game_state.frame_number == 1
             game_state.game_start_time = game_state.frame_start_time
         end
@@ -249,6 +251,8 @@ function start_client(test_config)
 
     while true
         game_state.frame_start_time = time_ns()
+
+        reset!(frame_debug_info)
 
         if game_state.frame_number == 1
             game_state.game_start_time = game_state.frame_start_time

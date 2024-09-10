@@ -80,6 +80,18 @@ end
 
 FrameDebugInfo(game_state, app_server_state, client_state) = FrameDebugInfo(game_state, 0, 0, 0, 0, 0, [], [], app_server_state, client_state)
 
+function reset!(frame_debug_info::FrameDebugInfo)
+    frame_debug_info.frame_time = 0
+    frame_debug_info.update_time_theoretical = 0
+    frame_debug_info.update_time_observed = 0
+    frame_debug_info.sleep_time_theoretical = 0
+    frame_debug_info.sleep_time_observed = 0
+    empty!(frame_debug_info.packets_received)
+    empty!(frame_debug_info.packets_sent)
+
+    return nothing
+end
+
 function GameState(target_frame_rate, max_frames)
     target_ns_per_frame = 1_000_000_000 ÷ target_frame_rate
     return GameState(0, 1, 0, target_frame_rate, target_ns_per_frame, max_frames, "", "")
