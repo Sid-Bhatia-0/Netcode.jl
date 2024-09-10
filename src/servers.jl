@@ -171,7 +171,7 @@ function start_app_server(test_config)
 
                     connection_packet = ConnectionPacket(packet_prefix, CompactUnsignedInteger(app_server_state.packet_sequence_number), encrypted_packet_data)
 
-                    data = get_serialized_data(connection_packet)
+                    data = get_netcode_serialized_data(connection_packet)
 
                     inet_address = get_inetaddr(waiting_client_slot.netcode_address)
                     Sockets.send(app_server_state.socket, inet_address.host, inet_address.port, data)
@@ -313,7 +313,7 @@ function start_client(test_config)
         if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_number - client_state.last_connection_request_packet_sent_frame > (connection_request_packet_wait_time * game_state.target_frame_rate) ÷ 10 ^ 9)
             connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet)
 
-            data = get_serialized_data(connection_request_packet)
+            data = get_netcode_serialized_data(connection_request_packet)
 
             app_server_netcode_address = first(client_state.connect_token_packet.netcode_addresses)
 
@@ -376,7 +376,7 @@ function auth_handler(request, df_user_data, protocol_id, timeout_seconds, conne
 
                     connect_token_packet = ConnectTokenPacket(connect_token_info)
 
-                    data = get_serialized_data(connect_token_packet)
+                    data = get_netcode_serialized_data(connect_token_packet)
 
                     return HTTP.Response(200, data)
                 else
