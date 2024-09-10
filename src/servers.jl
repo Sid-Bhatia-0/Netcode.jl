@@ -141,7 +141,23 @@ function start_app_server(test_config)
             break
         end
 
-        game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
+        if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+            frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+
+            @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
+
+            game_state.clean_input_string = frame_debug_info_load.game_state.clean_input_string
+
+            while !isempty(app_server_state.packet_receive_channel)
+                take!(app_server_state.packet_receive_channel)
+            end
+
+            for (netcode_address, data) in frame_debug_info_load.packets_received
+                put!(app_server_state.packet_receive_channel, (netcode_address, copy(data)))
+            end
+        else
+            game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
+        end
 
         if game_state.frame_number > 1
             REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
@@ -273,7 +289,23 @@ function start_client(test_config)
             break
         end
 
-        game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
+        if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+            frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+
+            @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
+
+            game_state.clean_input_string = frame_debug_info_load.game_state.clean_input_string
+
+            while !isempty(client_state.packet_receive_channel)
+                take!(client_state.packet_receive_channel)
+            end
+
+            for (netcode_address, data) in frame_debug_info_load.packets_received
+                put!(client_state.packet_receive_channel, (netcode_address, copy(data)))
+            end
+        else
+            game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
+        end
 
         if game_state.frame_number > 1
             REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
