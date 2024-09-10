@@ -29,9 +29,9 @@ function handle_packet!(app_server_state, client_netcode_address, data, frame_nu
 
         io = IOBuffer(data)
 
-        connection_request_packet = try_read(io, ConnectionRequestPacket, app_server_state.protocol_id, frame_start_time)
+        connection_request_packet = netcode_deserialize(io, ConnectionRequestPacket, app_server_state.protocol_id, frame_start_time)
         if isnothing(connection_request_packet)
-            @info "Packet ignored: `try_read` returned `nothing`"
+            @info "Packet ignored: `netcode_deserialize` returned `nothing`"
             return nothing
         end
 
@@ -290,10 +290,10 @@ function start_client(test_config)
                 error("Connect token invalid: unexpected `packet_size`")
             end
 
-            connect_token_packet = try_read(IOBuffer(connect_token_request_response.body), ConnectTokenPacket, protocol_id)
+            connect_token_packet = netcode_deserialize(IOBuffer(connect_token_request_response.body), ConnectTokenPacket, protocol_id)
             if isnothing(connect_token_packet)
                 client_state.state_machine_state = CLIENT_STATE_INVALID_CONNECT_TOKEN
-                error("Connect token invalid: `try_read` returned `nothing`")
+                error("Connect token invalid: `netcode_deserialize` returned `nothing`")
             else
                 client_state.connect_token_packet = connect_token_packet
                 client_state.state_machine_state = CLIENT_STATE_SENDING_CONNECTION_REQUEST

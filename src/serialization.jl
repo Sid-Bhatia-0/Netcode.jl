@@ -173,7 +173,7 @@ function netcode_serialize(io::IO, value::ExtendedUnsignedInteger)
     return n
 end
 
-function try_read(io::IO, ::Type{NetcodeAddress})
+function netcode_deserialize(io::IO, ::Type{NetcodeAddress})
     address_type = read(io, TYPE_OF_ADDRESS_TYPE)
 
     if address_type == ADDRESS_TYPE_IPV4
@@ -191,7 +191,7 @@ function try_read(io::IO, ::Type{NetcodeAddress})
     return NetcodeAddress(address_type, host_ipv4, host_ipv6, port)
 end
 
-function try_read(io::IO, ::Type{ConnectTokenPacket}, expected_protocol_id)
+function netcode_deserialize(io::IO, ::Type{ConnectTokenPacket}, expected_protocol_id)
     netcode_version_info = read(io, SIZE_OF_NETCODE_VERSION_INFO)
     if netcode_version_info != NETCODE_VERSION_INFO
         return nothing
@@ -222,7 +222,7 @@ function try_read(io::IO, ::Type{ConnectTokenPacket}, expected_protocol_id)
     netcode_addresses = NetcodeAddress[]
 
     for i in 1:num_server_addresses
-        netcode_address = try_read(io, NetcodeAddress)
+        netcode_address = netcode_deserialize(io, NetcodeAddress)
         if !isnothing(netcode_address)
             push!(netcode_addresses, netcode_address)
         else
@@ -256,7 +256,7 @@ function try_read(io::IO, ::Type{ConnectTokenPacket}, expected_protocol_id)
     )
 end
 
-function try_read(io::IO, ::Type{ConnectionRequestPacket}, expected_protocol_id, frame_start_time)
+function netcode_deserialize(io::IO, ::Type{ConnectionRequestPacket}, expected_protocol_id, frame_start_time)
     packet_prefix = read(io, TYPE_OF_PACKET_PREFIX)
 
     packet_type = get_packet_type(packet_prefix)
@@ -293,7 +293,7 @@ function try_read(io::IO, ::Type{ConnectionRequestPacket}, expected_protocol_id,
     )
 end
 
-function try_read(io::IO, ::Type{PrivateConnectToken})
+function netcode_deserialize(io::IO, ::Type{PrivateConnectToken})
     client_id = read(io, TYPE_OF_CLIENT_ID)
 
     timeout_seconds = read(io, TYPE_OF_TIMEOUT_SECONDS)
@@ -306,7 +306,7 @@ function try_read(io::IO, ::Type{PrivateConnectToken})
     netcode_addresses = NetcodeAddress[]
 
     for i in 1:num_server_addresses
-        netcode_address = try_read(io, NetcodeAddress)
+        netcode_address = netcode_deserialize(io, NetcodeAddress)
         if !isnothing(netcode_address)
             push!(netcode_addresses, netcode_address)
         else

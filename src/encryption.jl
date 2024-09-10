@@ -39,7 +39,7 @@ function try_decrypt(connection_request_packet::ConnectionRequestPacket, key)
 
     io = IOBuffer(decrypted)
 
-    private_connect_token = try_read(io, PrivateConnectToken)
+    private_connect_token = netcode_deserialize(io, PrivateConnectToken)
     if isnothing(private_connect_token)
         return nothing
     end
