@@ -118,7 +118,15 @@ function start_app_server(test_config)
     )
 
     while true
-        game_state.frame_start_time = time_ns()
+        if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+            frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+
+            @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
+
+            game_state.frame_start_time = frame_debug_info_load.game_state.frame_start_time
+        else
+            game_state.frame_start_time = time_ns()
+        end
 
         reset!(frame_debug_info)
 
@@ -266,7 +274,15 @@ function start_client(test_config)
     connect_token_request_response = nothing
 
     while true
-        game_state.frame_start_time = time_ns()
+        if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+            frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+
+            @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
+
+            game_state.frame_start_time = frame_debug_info_load.game_state.frame_start_time
+        else
+            game_state.frame_start_time = time_ns()
+        end
 
         reset!(frame_debug_info)
 
