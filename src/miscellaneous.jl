@@ -1,4 +1,4 @@
-function ReplayManager(; replay_file_save = nothing, replay_file_load = nothing, frame_number_load_reset = nothing)
+function ReplayManagerTest(; replay_file_save = nothing, replay_file_load = nothing, frame_number_load_reset = nothing)
     if !isnothing(frame_number_load_reset)
         @assert !isnothing(replay_file_load)
     end
@@ -27,7 +27,7 @@ function ReplayManager(; replay_file_save = nothing, replay_file_load = nothing,
         is_replay_input = false
     end
 
-    return ReplayManager(
+    return ReplayManagerTest(
         replay_file_save,
         replay_file_load,
         io_replay_file_save,
@@ -38,11 +38,63 @@ function ReplayManager(; replay_file_save = nothing, replay_file_load = nothing,
     )
 end
 
-FrameDebugInfo() = FrameDebugInfo(0, 0, 0, 0, 0, 0, 0, [], [])
+function reset!(replay_manager::ReplayManager; replay_file_save = nothing, replay_file_load = nothing, frame_number_load_reset = nothing)
+    if !isnothing(frame_number_load_reset)
+        @assert !isnothing(replay_file_load)
+    end
 
-function GameState(target_frame_rate, total_frames)
+    if !isnothing(replay_file_save) && !isnothing(replay_file_load)
+        @assert replay_file_save != replay_file_load
+    end
+
+    if !isnothing(replay_file_save)
+        io_replay_file_save = open(replay_file_save, "w")
+    else
+        io_replay_file_save = nothing
+    end
+
+    if !isnothing(replay_file_load)
+        debug_info_load = DebugInfo(FrameDebugInfo[])
+        load_replay_file!(debug_info_load, replay_file_load)
+
+        is_replay_input = true
+
+        if !isnothing(frame_number_load_reset)
+            @assert frame_number_load_reset in 1 : length(debug_info_load.frame_debug_infos)
+        end
+    else
+        debug_info_load = nothing
+        is_replay_input = false
+    end
+
+    replay_manager.replay_file_save = replay_file_save
+    replay_manager.replay_file_load = replay_file_load
+    replay_manager.io_replay_file_save = io_replay_file_save
+    empty!(replay_manager.debug_info_save.frame_debug_infos)
+    replay_manager.debug_info_load = debug_info_load
+    replay_manager.is_replay_input = is_replay_input
+    replay_manager.frame_number_load_reset = frame_number_load_reset
+
+    return nothing
+end
+
+FrameDebugInfo(game_state, app_server_state, client_state) = FrameDebugInfo(game_state, 0, 0, 0, 0, 0, [], [], app_server_state, client_state)
+
+function reset!(frame_debug_info::FrameDebugInfo)
+    frame_debug_info.frame_time = 0
+    frame_debug_info.update_time_theoretical = 0
+    frame_debug_info.update_time_observed = 0
+    frame_debug_info.sleep_time_theoretical = 0
+    frame_debug_info.sleep_time_observed = 0
+    empty!(frame_debug_info.packets_received)
+    empty!(frame_debug_info.packets_sent)
+
+    return nothing
+end
+
+function GameState(target_frame_rate, max_frames)
     target_ns_per_frame = 1_000_000_000 ÷ target_frame_rate
-    return GameState(0, 1, 0, target_frame_rate, target_ns_per_frame, total_frames)
+    return GameState(0, 1, 0, target_frame_rate, target_ns_per_frame, max_frames, "", "")
 end
 
 function NetcodeAddress(address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}})
@@ -124,9 +176,9 @@ function PrivateConnectTokenAssociatedData(connection_request_packet::Connection
 end
 
 function ConnectTokenPacket(connect_token_info::ConnectTokenInfo)
-    message = get_serialized_data(PrivateConnectToken(connect_token_info))
+    message = get_netcode_serialized_data(PrivateConnectToken(connect_token_info))
 
-    associated_data = get_serialized_data(PrivateConnectTokenAssociatedData(connect_token_info))
+    associated_data = get_netcode_serialized_data(PrivateConnectTokenAssociatedData(connect_token_info))
 
     encrypted_private_connect_token_data = encrypt(message, associated_data, connect_token_info.nonce, connect_token_info.server_side_shared_key)
 
@@ -321,7 +373,7 @@ get_packet_prefix(packet_data::Vector{UInt8})::TYPE_OF_PACKET_PREFIX = first(pac
 
 get_packet_type(packet_prefix::TYPE_OF_PACKET_PREFIX)::TYPE_OF_PACKET_TYPE = packet_prefix & 0xf
 
-generate_packet_prefix(packet_type::TYPE_OF_PACKET_TYPE, packet_sequence_number) = packet_type | convert(TYPE_OF_PACKET_PREFIX, get_serialized_size(CompactUnsignedInteger(packet_sequence_number)))
+generate_packet_prefix(packet_type::TYPE_OF_PACKET_TYPE, packet_sequence_number) = packet_type | convert(TYPE_OF_PACKET_PREFIX, get_netcode_serialized_size(CompactUnsignedInteger(packet_sequence_number)))
 
 function create_logger(name, modules)
     return LE.EarlyFilteredLogger(

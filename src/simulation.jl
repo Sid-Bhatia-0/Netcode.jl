@@ -48,33 +48,51 @@ function summarize_debug_info(debug_info)
 end
 
 function simulate_update!(game_state)
-    frame_debug_info = DEBUG_INFO.frame_debug_infos[game_state.frame_number]
-    update_time_theoretical = 2_000_000
-    frame_debug_info.update_time_theoretical = update_time_theoretical
-    update_start_time = time_ns()
-    sleep(update_time_theoretical / 1e9)
-    update_end_time = time_ns()
-    frame_debug_info.update_time_observed = update_end_time - update_start_time
+    if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+        frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+        sleep(frame_debug_info_load.update_time_theoretical / 1e9)
+
+        frame_debug_info = REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number]
+        frame_debug_info.update_time_theoretical = frame_debug_info_load.update_time_theoretical
+        frame_debug_info.update_time_observed = frame_debug_info_load.update_time_observed
+    else
+        frame_debug_info = REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number]
+        update_time_theoretical = 2_000_000
+        frame_debug_info.update_time_theoretical = update_time_theoretical
+        update_start_time = time_ns()
+        sleep(update_time_theoretical / 1e9)
+        update_end_time = time_ns()
+        frame_debug_info.update_time_observed = update_end_time - update_start_time
+    end
 
     return nothing
 end
 
 function sleep_to_achieve_target_frame_rate!(game_state)
-    frame_debug_info = DEBUG_INFO.frame_debug_infos[game_state.frame_number]
+    if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+        frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+        sleep(frame_debug_info_load.sleep_time_theoretical / 1e9)
 
-    expected_frame_end_time = game_state.game_start_time + game_state.target_ns_per_frame * game_state.frame_number
-    current_time = time_ns()
-    if current_time < expected_frame_end_time
-        sleep_time_theoretical = expected_frame_end_time - current_time
+        frame_debug_info = REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number]
+        frame_debug_info.sleep_time_theoretical = frame_debug_info_load.sleep_time_theoretical
+        frame_debug_info.sleep_time_observed = frame_debug_info_load.sleep_time_observed
     else
-        sleep_time_theoretical = zero(current_time)
-    end
-    frame_debug_info.sleep_time_theoretical = sleep_time_theoretical
+        frame_debug_info = REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number]
 
-    sleep_start_time = time_ns()
-    sleep(sleep_time_theoretical / 1e9)
-    sleep_end_time = time_ns()
-    frame_debug_info.sleep_time_observed = sleep_end_time - sleep_start_time
+        expected_frame_end_time = game_state.game_start_time + game_state.target_ns_per_frame * game_state.frame_number
+        current_time = time_ns()
+        if current_time < expected_frame_end_time
+            sleep_time_theoretical = expected_frame_end_time - current_time
+        else
+            sleep_time_theoretical = zero(current_time)
+        end
+        frame_debug_info.sleep_time_theoretical = sleep_time_theoretical
+
+        sleep_start_time = time_ns()
+        sleep(sleep_time_theoretical / 1e9)
+        sleep_end_time = time_ns()
+        frame_debug_info.sleep_time_observed = sleep_end_time - sleep_start_time
+    end
 
     return nothing
 end

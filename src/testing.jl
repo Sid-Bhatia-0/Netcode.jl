@@ -31,7 +31,7 @@ function TestConfig()
     packet_receive_channel_size = 32
 
     target_frame_rate = 60
-    total_frames = target_frame_rate * 30
+    max_frames = target_frame_rate * 30
 
     connect_token_request_frame = 5 * target_frame_rate
 
@@ -41,11 +41,16 @@ function TestConfig()
 
     challenge_token_key = rand(rng, UInt8, SIZE_OF_KEY)
 
-    client_save_debug_info_file = "client_save_debug_info.debug"
-    server_save_debug_info_file = "server_save_debug_info.debug"
-
     client_username = "user1"
     client_password = "password1"
+
+    replay_file_save_client = "client.replay"
+    replay_file_load_client = nothing
+    frame_number_load_reset_client = nothing
+
+    replay_file_save_server = "server.replay"
+    replay_file_load_server = nothing
+    frame_number_load_reset_server = nothing
 
     return TestConfig(
         protocol_id,
@@ -63,15 +68,19 @@ function TestConfig()
         user_data,
         packet_receive_channel_size,
         target_frame_rate,
-        total_frames,
+        max_frames,
         connect_token_request_frame,
         challenge_delay,
         connection_request_packet_wait_time,
         challenge_token_key,
-        client_save_debug_info_file,
-        server_save_debug_info_file,
         client_username,
         client_password,
+        replay_file_save_client,
+        replay_file_load_client,
+        frame_number_load_reset_client,
+        replay_file_save_server,
+        replay_file_load_server,
+        frame_number_load_reset_server,
     )
 end
 
@@ -137,6 +146,8 @@ function load_replay_file(replay_file)
 
         i += 1
     end
+
+    close(io)
 
     return debug_info_load
 end
@@ -207,7 +218,7 @@ function test_debug_loop(; replay_file_save = nothing, replay_file_load = nothin
 
     frame_debug_info = FrameDebugInfoTest(game_state)
 
-    replay_manager = ReplayManager(;
+    replay_manager = ReplayManagerTest(;
         replay_file_save = replay_file_save,
         replay_file_load = replay_file_load,
         frame_number_load_reset = frame_number_load_reset,

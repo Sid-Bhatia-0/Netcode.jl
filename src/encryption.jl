@@ -28,7 +28,7 @@ end
 function try_decrypt(connection_request_packet::ConnectionRequestPacket, key)
     decrypted = try_decrypt(
         connection_request_packet.encrypted_private_connect_token_data,
-        get_serialized_data(PrivateConnectTokenAssociatedData(connection_request_packet)),
+        get_netcode_serialized_data(PrivateConnectTokenAssociatedData(connection_request_packet)),
         connection_request_packet.nonce,
         key,
     )
@@ -39,7 +39,7 @@ function try_decrypt(connection_request_packet::ConnectionRequestPacket, key)
 
     io = IOBuffer(decrypted)
 
-    private_connect_token = try_read(io, PrivateConnectToken)
+    private_connect_token = netcode_deserialize(io, PrivateConnectToken)
     if isnothing(private_connect_token)
         return nothing
     end
@@ -48,11 +48,11 @@ function try_decrypt(connection_request_packet::ConnectionRequestPacket, key)
 end
 
 function encrypt(challenge_token_info::ChallengeTokenInfo)
-    message = get_serialized_data(ChallengeTokenMessage(challenge_token_info))
+    message = get_netcode_serialized_data(ChallengeTokenMessage(challenge_token_info))
 
     associated_data = UInt8[]
 
-    nonce = get_serialized_data(ExtendedUnsignedInteger(SIZE_OF_EXTENDED_SEQUENCE_NUMBER_NONCE, challenge_token_info.challenge_token_sequence_number))
+    nonce = get_netcode_serialized_data(ExtendedUnsignedInteger(SIZE_OF_EXTENDED_SEQUENCE_NUMBER_NONCE, challenge_token_info.challenge_token_sequence_number))
 
     key = challenge_token_info.challenge_token_key
 
@@ -64,9 +64,9 @@ end
 function encrypt(connection_packet_info::ConnectionPacketInfo)
     message = connection_packet_info.packet_data
 
-    associated_data = get_serialized_data(ConnectionPacketAssociatedData(connection_packet_info))
+    associated_data = get_netcode_serialized_data(ConnectionPacketAssociatedData(connection_packet_info))
 
-    nonce = get_serialized_data(ExtendedUnsignedInteger(SIZE_OF_EXTENDED_SEQUENCE_NUMBER_NONCE, connection_packet_info.packet_sequence_number))
+    nonce = get_netcode_serialized_data(ExtendedUnsignedInteger(SIZE_OF_EXTENDED_SEQUENCE_NUMBER_NONCE, connection_packet_info.packet_sequence_number))
 
     key = connection_packet_info.server_to_client_key
 

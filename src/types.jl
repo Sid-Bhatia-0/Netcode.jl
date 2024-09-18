@@ -13,7 +13,7 @@ mutable struct DebugInfoTest
     frame_debug_infos::Vector{FrameDebugInfoTest}
 end
 
-mutable struct ReplayManager
+mutable struct ReplayManagerTest
     replay_file_save::Union{Nothing, String}
     replay_file_load::Union{Nothing, String}
     io_replay_file_save::Union{Nothing, IO}
@@ -39,34 +39,20 @@ struct TestConfig
     user_data::DF.DataFrame
     packet_receive_channel_size::Int
     target_frame_rate::Int
-    total_frames::Int
+    max_frames::Int
     connect_token_request_frame::Int
     challenge_delay::Int
     connection_request_packet_wait_time::Int
     challenge_token_key::Vector{UInt8}
-    client_save_debug_info_file::Union{Nothing, String}
-    server_save_debug_info_file::Union{Nothing, String}
     client_username::String
     client_password::String
+    replay_file_save_client::Union{Nothing, String}
+    replay_file_load_client::Union{Nothing, String}
+    frame_number_load_reset_client::Union{Nothing, Int}
+    replay_file_save_server::Union{Nothing, String}
+    replay_file_load_server::Union{Nothing, String}
+    frame_number_load_reset_server::Union{Nothing, Int}
 end
-
-mutable struct FrameDebugInfo
-    frame_number::Int
-    frame_start_time::TYPE_OF_TIMESTAMP
-    frame_time::Int
-    update_time_theoretical::Int
-    update_time_observed::Int
-    sleep_time_theoretical::Int
-    sleep_time_observed::Int
-    packets_received::Vector{Any}
-    packets_sent::Vector{Any}
-end
-
-struct DebugInfo
-    frame_debug_infos::Vector{FrameDebugInfo}
-end
-
-const DEBUG_INFO = DebugInfo(FrameDebugInfo[])
 
 mutable struct GameState
     game_start_time::TYPE_OF_TIMESTAMP
@@ -74,8 +60,49 @@ mutable struct GameState
     frame_start_time::TYPE_OF_TIMESTAMP
     target_frame_rate::Int
     target_ns_per_frame::Int
-    total_frames::Int
+    max_frames::Int
+    raw_input_string::String
+    clean_input_string::String
 end
+
+mutable struct FrameDebugInfo
+    game_state::GameState
+    frame_time::Int
+    update_time_theoretical::Int
+    update_time_observed::Int
+    sleep_time_theoretical::Int
+    sleep_time_observed::Int
+    packets_received::Vector{Any}
+    packets_sent::Vector{Any}
+    app_server_state::Any
+    client_state::Any
+end
+
+struct DebugInfo
+    frame_debug_infos::Vector{FrameDebugInfo}
+end
+
+mutable struct ReplayManager
+    replay_file_save::Union{Nothing, String}
+    replay_file_load::Union{Nothing, String}
+    io_replay_file_save::Union{Nothing, IO}
+    debug_info_save::DebugInfo
+    debug_info_load::Union{Nothing, DebugInfo}
+    is_replay_input::Union{Nothing, Bool}
+    frame_number_load_reset::Union{Nothing, Int}
+end
+
+ReplayManager() = ReplayManager(
+    nothing,
+    nothing,
+    nothing,
+    DebugInfo(FrameDebugInfo[]),
+    nothing,
+    nothing,
+    nothing,
+)
+
+const REPLAY_MANAGER = ReplayManager()
 
 struct NetcodeAddress
     address_type::TYPE_OF_ADDRESS_TYPE
