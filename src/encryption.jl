@@ -1,8 +1,8 @@
-function encrypt(message, associated_data, nonce, key)
+function encrypt(f, message, associated_data, nonce, key)
     ciphertext = zeros(UInt8, length(message) + SIZE_OF_HMAC)
     ciphertext_length_ref = Ref{UInt}()
 
-    encrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(ciphertext, ciphertext_length_ref, message, length(message), associated_data, length(associated_data), C_NULL, nonce, key)
+    encrypt_status = f(ciphertext, ciphertext_length_ref, message, length(message), associated_data, length(associated_data), C_NULL, nonce, key)
 
     @assert encrypt_status == 0
     @assert ciphertext_length_ref[] == length(ciphertext)
@@ -10,11 +10,11 @@ function encrypt(message, associated_data, nonce, key)
     return ciphertext
 end
 
-function try_decrypt(ciphertext, associated_data, nonce, key)
+function try_decrypt(f, ciphertext, associated_data, nonce, key)
     decrypted = zeros(UInt8, length(ciphertext) - SIZE_OF_HMAC)
     decrypted_length_ref = Ref{UInt}()
 
-    decrypt_status = Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_decrypt(decrypted, decrypted_length_ref, C_NULL, ciphertext, length(ciphertext), associated_data, length(associated_data), nonce, key)
+    decrypt_status = f(decrypted, decrypted_length_ref, C_NULL, ciphertext, length(ciphertext), associated_data, length(associated_data), nonce, key)
 
     if decrypt_status != 0
         return nothing
@@ -27,6 +27,7 @@ end
 
 function try_decrypt(connection_request_packet::ConnectionRequestPacket, key)
     decrypted = try_decrypt(
+        Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_decrypt,
         connection_request_packet.encrypted_private_connect_token_data,
         get_netcode_serialized_data(PrivateConnectTokenAssociatedData(connection_request_packet)),
         connection_request_packet.nonce,
@@ -56,7 +57,7 @@ function encrypt(challenge_token_info::ChallengeTokenInfo)
 
     key = challenge_token_info.challenge_token_key
 
-    ciphertext = encrypt(message, associated_data, nonce, key)
+    ciphertext = encrypt(Sodium.LibSodium.crypto_aead_chacha20poly1305_ietf_encrypt, message, associated_data, nonce, key)
 
     return ciphertext
 end
@@ -70,7 +71,7 @@ function encrypt(connection_packet_info::ConnectionPacketInfo)
 
     key = connection_packet_info.server_to_client_key
 
-    ciphertext = encrypt(message, associated_data, nonce, key)
+    ciphertext = encrypt(Sodium.LibSodium.crypto_aead_chacha20poly1305_ietf_encrypt, message, associated_data, nonce, key)
 
     return ciphertext
 end

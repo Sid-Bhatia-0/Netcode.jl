@@ -180,7 +180,7 @@ function ConnectTokenPacket(connect_token_info::ConnectTokenInfo)
 
     associated_data = get_netcode_serialized_data(PrivateConnectTokenAssociatedData(connect_token_info))
 
-    encrypted_private_connect_token_data = encrypt(message, associated_data, connect_token_info.nonce, connect_token_info.server_side_shared_key)
+    encrypted_private_connect_token_data = encrypt(Sodium.LibSodium.crypto_aead_xchacha20poly1305_ietf_encrypt, message, associated_data, connect_token_info.nonce, connect_token_info.server_side_shared_key)
 
     return ConnectTokenPacket(
         connect_token_info.netcode_version_info,
