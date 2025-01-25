@@ -193,6 +193,11 @@ struct ChallengeTokenMessage
     user_data::Vector{UInt8}
 end
 
+struct ChallengePacketInfo
+    challenge_token_sequence_number::TYPE_OF_CHALLENGE_TOKEN_SEQUENCE_NUMBER
+    encrypted_challenge_token_data::Vector{UInt8}
+end
+
 struct ConnectTokenSlot
     last_seen_frame::Int
     hmac_hash::UInt64

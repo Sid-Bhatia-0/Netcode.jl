@@ -46,6 +46,8 @@ get_netcode_serialized_size(packet::AbstractPacket) = get_netcode_serialized_siz
 
 get_netcode_serialized_size(::ConnectTokenPacket) = SIZE_OF_CONNECT_TOKEN_PACKET
 
+get_netcode_serialized_size(value::ChallengePacketInfo) = get_netcode_serialized_size_fields(value)
+
 function get_netcode_serialized_size(value::CompactUnsignedInteger)
     x = value.value
     num_bits_required = get_netcode_serialized_size(x) * 8 - leading_zeros(x)
@@ -135,6 +137,8 @@ netcode_serialize(io::IO, value::ConnectionPacketAssociatedData) = netcode_seria
 netcode_serialize(io::IO, packet::AbstractPacket) = netcode_serialize_fields(io, packet)
 
 netcode_serialize(io::IO, packet::ConnectTokenPacket) = netcode_serialize_fields_and_padding(io, packet)
+
+netcode_serialize(io::IO, value::ChallengePacketInfo) = netcode_serialize_fields(io, value)
 
 function netcode_serialize(io::IO, value::CompactUnsignedInteger)
     n = 0

@@ -230,8 +230,10 @@ function start_app_server(test_config)
                     app_server_state.challenge_token_sequence_number += 1
 
                     encrypted_challenge_token_data = encrypt(challenge_token_info)
+                    challenge_packet_info = ChallengePacketInfo(challenge_token_info.challenge_token_sequence_number, encrypted_challenge_token_data)
+                    challenge_packet_data = get_netcode_serialized_data(challenge_packet_info)
 
-                    connection_packet_info = ConnectionPacketInfo(app_server_state.protocol_id, PACKET_TYPE_CONNECTION_CHALLENGE_PACKET, app_server_state.packet_sequence_number, encrypted_challenge_token_data, waiting_client_slot.server_to_client_key)
+                    connection_packet_info = ConnectionPacketInfo(app_server_state.protocol_id, PACKET_TYPE_CONNECTION_CHALLENGE_PACKET, app_server_state.packet_sequence_number, challenge_packet_data, waiting_client_slot.server_to_client_key)
 
                     encrypted_packet_data = encrypt(connection_packet_info)
 
