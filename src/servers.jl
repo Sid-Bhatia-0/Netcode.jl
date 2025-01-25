@@ -124,6 +124,67 @@ function handle_packet!(app_server_state::AppServerState, client_netcode_address
     end
 end
 
+function handle_packet!(client_state::ClientState, server_netcode_address, data, frame_number, frame_start_time)
+    packet_size = length(data)
+
+    if packet_size < 18
+        @info "Packet ignored: `packet_size` is too small" packet_size
+        return nothing
+    end
+
+    packet_prefix = get_packet_prefix(data)
+    packet_type = get_packet_type(packet_prefix)
+
+    if packet_type > MAX_PACKET_TYPE
+        @info "Packet ignored: invalid `packet_type`" packet_type
+        return nothing
+    end
+
+    num_bytes_of_sequence_number = get_num_bytes_of_sequence_number(packet_prefix)
+
+    if !(num_bytes_of_sequence_number in 1:sizeof(TYPE_OF_MAX_SEQUENCE_NUMBER))
+        @info "Packet ignored: `num_bytes_of_sequence_number` not in range" num_bytes_of_sequence_number 1:sizeof(TYPE_OF_MAX_SEQUENCE_NUMBER)
+        return nothing
+    end
+
+    if packet_size < 1 + num_bytes_of_sequence_number + 16
+        @info "Packet ignored: `packet_size` < 1 + `num_bytes_of_sequence_number` + 16" packet_size num_bytes_of_sequence_number
+        return nothing
+    end
+
+    size_of_packet_content = packet_size - 1 - num_bytes_of_sequence_number - SIZE_OF_HMAC
+
+    if packet_type == PACKET_TYPE_CONNECTION_DENIED_PACKET
+        if size_of_packet_content != SIZE_OF_CONNECTION_DENIED_PACKET_CONTENT
+            @info "Packet ignored: unexpected `size_of_packet_content`" size_of_packet_content SIZE_OF_CONNECTION_DENIED_PACKET_CONTENT
+            return nothing
+        end
+    elseif packet_type == PACKET_TYPE_CONNECTION_CHALLENGE_PACKET
+        if size_of_packet_content != SIZE_OF_CONNECTION_CHALLENGE_PACKET_CONTENT
+            @info "Packet ignored: unexpected `size_of_packet_content`" size_of_packet_content SIZE_OF_CONNECTION_CHALLENGE_PACKET_CONTENT
+            return nothing
+        end
+    elseif packet_type == PACKET_TYPE_CONNECTION_KEEP_ALIVE_PACKET
+        if size_of_packet_content != SIZE_OF_CONNECTION_KEEP_ALIVE_PACKET_CONTENT
+            @info "Packet ignored: unexpected `size_of_packet_content`" size_of_packet_content SIZE_OF_CONNECTION_KEEP_ALIVE_PACKET_CONTENT
+            return nothing
+        end
+    elseif packet_type == PACKET_TYPE_CONNECTION_PAYLOAD_PACKET
+        if !(size_of_packet_content in 1:MAX_SIZE_OF_CONNECTION_PAYLOAD_PACKET_CONTENT)
+            @info "Packet ignored: `size_of_packet_content` not in range" size_of_packet_content 1:MAX_SIZE_OF_CONNECTION_PAYLOAD_PACKET_CONTENT
+            return nothing
+        end
+    elseif packet_type == PACKET_TYPE_CONNECTION_DISCONNECT_PACKET
+        if size_of_packet_content != SIZE_OF_CONNECTION_DISCONNECT_PACKET_CONTENT
+            @info "Packet ignored: unexpected `size_of_packet_content`" size_of_packet_content SIZE_OF_CONNECTION_DISCONNECT_PACKET_CONTENT
+            return nothing
+        end
+    end
+
+    @info "Packet ignored: yet to implement handling of `packet_type`" packet_type
+    return nothing
+end
+
 function start_app_server(test_config)
     protocol_id = test_config.protocol_id
     server_side_shared_key = test_config.server_side_shared_key
@@ -369,6 +430,15 @@ function start_client(test_config)
 
         if game_state.frame_number > 1
             REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
+        end
+
+        while !isempty(client_state.packet_receive_channel)
+            server_netcode_address, data = take!(client_state.packet_receive_channel)
+            @info "Packet received:" server_netcode_address length(data) game_state.frame_number
+
+            push!(frame_debug_info.packets_received, (server_netcode_address, copy(data)))
+
+            handle_packet!(client_state, server_netcode_address, data, game_state.frame_number, game_state.frame_start_time)
         end
 
         # request connect token
