@@ -9,7 +9,7 @@ function setup_packet_receive_channel_task(channel, socket)
     return task
 end
 
-function handle_packet!(app_server_state, client_netcode_address, data, frame_number, frame_start_time)
+function handle_packet!(app_server_state::AppServerState, client_netcode_address, data, frame_number, frame_start_time)
     packet_size = length(data)
 
     if packet_size == 0
