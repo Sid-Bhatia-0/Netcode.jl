@@ -129,7 +129,7 @@ end
 
 function ConnectTokenInfo(create_timestamp, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses, client_id)
     # TODO: assert conditions on inputs
-    expire_timestamp = create_timestamp + connect_token_expire_seconds * 10 ^ 9
+    expire_timestamp = create_timestamp + connect_token_expire_seconds
 
     return ConnectTokenInfo(
         NETCODE_VERSION_INFO,

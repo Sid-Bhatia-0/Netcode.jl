@@ -469,7 +469,7 @@ function start_client(test_config)
         end
 
         # invalidate connect token when expired
-        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_start_time >= client_state.connect_token_packet.expire_timestamp)
+        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_start_time >= client_state.connect_token_packet.expire_timestamp * 10 ^ 9)
             @info "Connect token expired" game_state.frame_number
             client_state.connect_token_packet = nothing
             client_state.state_machine_state = CLIENT_STATE_CONNECT_TOKEN_EXPIRED
@@ -537,7 +537,7 @@ function auth_handler(request, df_user_data, protocol_id, timeout_seconds, conne
                 return HTTP.Response(400, "ERROR: Invalid credentials")
             else
                 if bytes2hex(SHA.sha3_256(hashed_password * df_user_data[i, :salt])) == df_user_data[i, :hashed_salted_hashed_password]
-                    create_timestamp = time_ns()
+                    create_timestamp = round(UInt64, time())
                     connect_token_info = ConnectTokenInfo(create_timestamp, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses, i)
 
                     connect_token_packet = ConnectTokenPacket(connect_token_info)
