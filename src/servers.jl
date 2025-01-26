@@ -219,21 +219,23 @@ function start_app_server(test_config)
     )
 
     while true
+        if game_state.frame_number == 1
+            game_state.game_start_time = round(TYPE_OF_TIMESTAMP, time() * 10 ^ 9)
+            game_state.reference_time_ns = time_ns()
+            game_state.frame_start_time = game_state.game_start_time
+        else
+            game_state.frame_start_time = game_state.game_start_time + get_time_since_reference_time_ns(game_state.reference_time_ns)
+        end
+
         if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
             frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
 
             @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
 
             game_state.frame_start_time = frame_debug_info_load.game_state.frame_start_time
-        else
-            game_state.frame_start_time = time_ns()
         end
 
         reset!(frame_debug_info)
-
-        if game_state.frame_number == 1
-            game_state.game_start_time = game_state.frame_start_time
-        end
 
         push!(REPLAY_MANAGER.debug_info_save.frame_debug_infos, frame_debug_info)
         @assert length(REPLAY_MANAGER.debug_info_save.frame_debug_infos) == game_state.frame_number
@@ -379,21 +381,23 @@ function start_client(test_config)
     connect_token_request_response = nothing
 
     while true
+        if game_state.frame_number == 1
+            game_state.game_start_time = round(TYPE_OF_TIMESTAMP, time() * 10 ^ 9)
+            game_state.reference_time_ns = time_ns()
+            game_state.frame_start_time = game_state.game_start_time
+        else
+            game_state.frame_start_time = game_state.game_start_time + get_time_since_reference_time_ns(game_state.reference_time_ns)
+        end
+
         if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
             frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
 
             @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
 
             game_state.frame_start_time = frame_debug_info_load.game_state.frame_start_time
-        else
-            game_state.frame_start_time = time_ns()
         end
 
         reset!(frame_debug_info)
-
-        if game_state.frame_number == 1
-            game_state.game_start_time = game_state.frame_start_time
-        end
 
         push!(REPLAY_MANAGER.debug_info_save.frame_debug_infos, frame_debug_info)
         @assert length(REPLAY_MANAGER.debug_info_save.frame_debug_infos) == game_state.frame_number

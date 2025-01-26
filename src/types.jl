@@ -56,6 +56,7 @@ end
 
 mutable struct GameState
     game_start_time::TYPE_OF_TIMESTAMP
+    reference_time_ns::TYPE_OF_TIMESTAMP
     frame_number::Int
     frame_start_time::TYPE_OF_TIMESTAMP
     target_frame_rate::Int
