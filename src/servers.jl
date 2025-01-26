@@ -537,7 +537,7 @@ function auth_handler(request, df_user_data, protocol_id, timeout_seconds, conne
                 return HTTP.Response(400, "ERROR: Invalid credentials")
             else
                 if bytes2hex(SHA.sha3_256(hashed_password * df_user_data[i, :salt])) == df_user_data[i, :hashed_salted_hashed_password]
-                    create_timestamp = round(UInt64, time())
+                    create_timestamp = round(TYPE_OF_TIMESTAMP, time())
                     connect_token_info = ConnectTokenInfo(create_timestamp, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses, i)
 
                     connect_token_packet = ConnectTokenPacket(connect_token_info)
