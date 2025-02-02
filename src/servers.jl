@@ -9,7 +9,7 @@ function setup_packet_receive_channel_task(channel, socket)
     return task
 end
 
-function set_frame_start_time(game_state)
+function set_frame_start_time!(game_state)
     if game_state.frame_number == 1
         game_state.game_start_time = round(TYPE_OF_TIMESTAMP, time() * 10 ^ 9)
         game_state.reference_time_ns = time_ns()
@@ -19,7 +19,7 @@ function set_frame_start_time(game_state)
     end
 end
 
-function replay_frame_start_time_maybe(game_state)
+function replay_frame_start_time_maybe!(game_state)
     if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
         frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
 
@@ -38,12 +38,12 @@ function append_frame_debug_info_to_debug_info_save(frame_debug_info)
     return nothing
 end
 
-function set_raw_input_string(game_state)
+function set_raw_input_string!(game_state)
     game_state.raw_input_string = get_raw_input_string()
     return nothing
 end
 
-function set_clean_input_string(game_state)
+function set_clean_input_string!(game_state)
     game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
     return nothing
 end
@@ -56,7 +56,7 @@ function log_periodic_progress(game_state)
     return nothing
 end
 
-function replay_clean_input_string_maybe(game_state)
+function replay_clean_input_string_maybe!(game_state)
     if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
         frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
 
@@ -68,7 +68,7 @@ function replay_clean_input_string_maybe(game_state)
     return nothing
 end
 
-function replay_packet_receive_channel_maybe(host_state)
+function replay_packet_receive_channel_maybe!(host_state)
     if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
         frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
 
@@ -466,15 +466,15 @@ function start_client(test_config)
     connect_token_request_response = nothing
 
     while true
-        set_frame_start_time(game_state)
-        replay_frame_start_time_maybe(game_state)
+        set_frame_start_time!(game_state)
+        replay_frame_start_time_maybe!(game_state)
 
         reset!(frame_debug_info)
         append_frame_debug_info_to_debug_info_save(frame_debug_info)
 
         log_periodic_progress(game_state)
 
-        set_raw_input_string(game_state)
+        set_raw_input_string!(game_state)
 
         if game_state.raw_input_string == "p"
             Debugger.@bp
@@ -482,10 +482,10 @@ function start_client(test_config)
             break
         end
 
-        set_clean_input_string(game_state)
-        replay_clean_input_string_maybe(game_state)
+        set_clean_input_string!(game_state)
+        replay_clean_input_string_maybe!(game_state)
 
-        replay_packet_receive_channel_maybe(client_state)
+        replay_packet_receive_channel_maybe!(client_state)
 
         set_previous_frame_time(game_state)
 
