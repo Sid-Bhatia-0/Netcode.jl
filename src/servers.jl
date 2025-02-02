@@ -108,7 +108,7 @@ function receive_and_handle_packets!(host_state, game_state)
     return nothing
 end
 
-function deepcopy_frame_debug_info()
+function deepcopy_frame_debug_info(game_state)
     REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number] = deepcopy(REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number])
 
     return nothing
@@ -412,7 +412,7 @@ function start_app_server(test_config)
 
         sleep_to_achieve_target_frame_rate!(game_state)
 
-        deepcopy_frame_debug_info()
+        deepcopy_frame_debug_info(game_state)
 
         save_frame_maybe!(REPLAY_MANAGER)
         load_frame_maybe!(game_state, app_server_state, client_state, REPLAY_MANAGER)
@@ -559,7 +559,7 @@ function start_client(test_config)
 
         sleep_to_achieve_target_frame_rate!(game_state)
 
-        deepcopy_frame_debug_info()
+        deepcopy_frame_debug_info(game_state)
 
         save_frame_maybe!(REPLAY_MANAGER)
         load_frame_maybe!(game_state, app_server_state, client_state, REPLAY_MANAGER)
