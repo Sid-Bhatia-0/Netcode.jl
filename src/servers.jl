@@ -107,6 +107,11 @@ function receive_and_handle_packets!(host_state, game_state)
     return nothing
 end
 
+function increment_frame_number!(game_state)
+    game_state.frame_number = game_state.frame_number + 1
+    return nothing
+end
+
 function handle_packet!(app_server_state::AppServerState, client_netcode_address, data, frame_number, frame_start_time)
     packet_size = length(data)
 
@@ -579,7 +584,7 @@ function start_client(test_config)
             break
         end
 
-        game_state.frame_number = game_state.frame_number + 1
+        increment_frame_number!(game_state)
     end
 
     if !isnothing(REPLAY_MANAGER.io_replay_file_save)
