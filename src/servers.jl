@@ -114,6 +114,13 @@ function deepcopy_frame_debug_info()
     return nothing
 end
 
+function clean_up!(app_server_state, game_state)
+    num_cleaned_up_waiting_room = clean_up!(app_server_state.waiting_room, game_state.frame_number, game_state.target_frame_rate)
+    app_server_state.num_occupied_waiting_room -= num_cleaned_up_waiting_room
+
+    return nothing
+end
+
 function increment_frame_number!(game_state)
     game_state.frame_number = game_state.frame_number + 1
     return nothing
@@ -360,8 +367,7 @@ function start_app_server(test_config)
 
         set_previous_frame_time(game_state)
 
-        num_cleaned_up_waiting_room = clean_up!(app_server_state.waiting_room, game_state.frame_number, game_state.target_frame_rate)
-        app_server_state.num_occupied_waiting_room -= num_cleaned_up_waiting_room
+        clean_up!(app_server_state, game_state)
 
         receive_and_handle_packets!(app_server_state, game_state)
 
