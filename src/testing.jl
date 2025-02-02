@@ -52,6 +52,18 @@ function TestConfig()
     replay_file_load_server = nothing
     frame_number_load_reset_server = nothing
 
+    easy_replay_switch = false
+
+    if easy_replay_switch
+        replay_file_save_client = "client_replay_run.replay"
+        replay_file_load_client = "client.replay"
+        frame_number_load_reset_client = nothing
+
+        replay_file_save_server = "server_replay_run.replay"
+        replay_file_load_server = "server.replay"
+        frame_number_load_reset_server = nothing
+    end
+
     return TestConfig(
         protocol_id,
         rng,
@@ -85,11 +97,17 @@ function TestConfig()
 end
 
 function test_app_server()
-    Logging.global_logger(Netcode.create_logger("app_server", [Main, Netcode]))
+    test_config = TestConfig()
+
+    if isnothing(test_config.replay_file_load_server)
+        x = "app_server"
+    else
+        x = "app_server_replay_run"
+    end
+
+    Logging.global_logger(Netcode.create_logger(x, [Main, Netcode]))
 
     @info "Running as app_server"
-
-    test_config = TestConfig()
 
     return start_app_server(test_config)
 end
@@ -105,11 +123,15 @@ function test_auth_server()
 end
 
 function test_client()
-    Logging.global_logger(Netcode.create_logger("client", [Main, Netcode]))
-
-    @info "Running as client"
-
     test_config = TestConfig()
+
+    if isnothing(test_config.replay_file_load_client)
+        x = "client"
+    else
+        x = "client_replay_run"
+    end
+
+    Logging.global_logger(Netcode.create_logger(x, [Main, Netcode]))
 
     return start_client(test_config)
 end

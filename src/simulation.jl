@@ -1,3 +1,18 @@
+function get_time_since_reference_time_ns(reference_time_ns)
+    # get time in nanoseconds since reference_time_ns
+    # places an upper bound on how much time can the program be running until time wraps around
+
+    t = time_ns()
+
+    if t >= reference_time_ns
+        return t - reference_time_ns
+    else
+        return (typemax(reference_time_ns) - reference_time_ns) + one(reference_time_ns) + t
+    end
+end
+
+get_time_ns(game_state::GameState) = game_state.game_start_time + get_time_since_reference_time_ns(game_state.reference_time_ns)
+
 function create_df_debug_info(debug_info)
     return DF.DataFrame([x => getfield.(debug_info.frame_debug_infos, x) for x in fieldnames(Netcode.FrameDebugInfo)]...)
 end
@@ -59,9 +74,9 @@ function simulate_update!(game_state)
         frame_debug_info = REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number]
         update_time_theoretical = 2_000_000
         frame_debug_info.update_time_theoretical = update_time_theoretical
-        update_start_time = time_ns()
+        update_start_time = get_time_ns(game_state)
         sleep(update_time_theoretical / 1e9)
-        update_end_time = time_ns()
+        update_end_time = get_time_ns(game_state)
         frame_debug_info.update_time_observed = update_end_time - update_start_time
     end
 
@@ -80,7 +95,7 @@ function sleep_to_achieve_target_frame_rate!(game_state)
         frame_debug_info = REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number]
 
         expected_frame_end_time = game_state.game_start_time + game_state.target_ns_per_frame * game_state.frame_number
-        current_time = time_ns()
+        current_time = get_time_ns(game_state)
         if current_time < expected_frame_end_time
             sleep_time_theoretical = expected_frame_end_time - current_time
         else
@@ -88,9 +103,9 @@ function sleep_to_achieve_target_frame_rate!(game_state)
         end
         frame_debug_info.sleep_time_theoretical = sleep_time_theoretical
 
-        sleep_start_time = time_ns()
+        sleep_start_time = get_time_ns(game_state)
         sleep(sleep_time_theoretical / 1e9)
-        sleep_end_time = time_ns()
+        sleep_end_time = get_time_ns(game_state)
         frame_debug_info.sleep_time_observed = sleep_end_time - sleep_start_time
     end
 

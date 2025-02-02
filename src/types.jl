@@ -56,6 +56,7 @@ end
 
 mutable struct GameState
     game_start_time::TYPE_OF_TIMESTAMP
+    reference_time_ns::TYPE_OF_TIMESTAMP
     frame_number::Int
     frame_start_time::TYPE_OF_TIMESTAMP
     target_frame_rate::Int
@@ -72,6 +73,7 @@ mutable struct FrameDebugInfo
     update_time_observed::Int
     sleep_time_theoretical::Int
     sleep_time_observed::Int
+    connect_token_request_response::Any
     packets_received::Vector{Any}
     packets_sent::Vector{Any}
     app_server_state::Any

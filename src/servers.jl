@@ -219,21 +219,23 @@ function start_app_server(test_config)
     )
 
     while true
+        if game_state.frame_number == 1
+            game_state.game_start_time = round(TYPE_OF_TIMESTAMP, time() * 10 ^ 9)
+            game_state.reference_time_ns = time_ns()
+            game_state.frame_start_time = game_state.game_start_time
+        else
+            game_state.frame_start_time = game_state.game_start_time + get_time_since_reference_time_ns(game_state.reference_time_ns)
+        end
+
         if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
             frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
 
             @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
 
             game_state.frame_start_time = frame_debug_info_load.game_state.frame_start_time
-        else
-            game_state.frame_start_time = time_ns()
         end
 
         reset!(frame_debug_info)
-
-        if game_state.frame_number == 1
-            game_state.game_start_time = game_state.frame_start_time
-        end
 
         push!(REPLAY_MANAGER.debug_info_save.frame_debug_infos, frame_debug_info)
         @assert length(REPLAY_MANAGER.debug_info_save.frame_debug_infos) == game_state.frame_number
@@ -379,21 +381,23 @@ function start_client(test_config)
     connect_token_request_response = nothing
 
     while true
+        if game_state.frame_number == 1
+            game_state.game_start_time = round(TYPE_OF_TIMESTAMP, time() * 10 ^ 9)
+            game_state.reference_time_ns = time_ns()
+            game_state.frame_start_time = game_state.game_start_time
+        else
+            game_state.frame_start_time = game_state.game_start_time + get_time_since_reference_time_ns(game_state.reference_time_ns)
+        end
+
         if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
             frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
 
             @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
 
             game_state.frame_start_time = frame_debug_info_load.game_state.frame_start_time
-        else
-            game_state.frame_start_time = time_ns()
         end
 
         reset!(frame_debug_info)
-
-        if game_state.frame_number == 1
-            game_state.game_start_time = game_state.frame_start_time
-        end
 
         push!(REPLAY_MANAGER.debug_info_save.frame_debug_infos, frame_debug_info)
         @assert length(REPLAY_MANAGER.debug_info_save.frame_debug_infos) == game_state.frame_number
@@ -443,13 +447,21 @@ function start_client(test_config)
 
         # request connect token
         if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && game_state.frame_number == connect_token_request_frame
-            errormonitor(@async connect_token_request_response = HTTP.get(auth_server_url))
+            if !(!isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input)
+                errormonitor(@async connect_token_request_response = HTTP.get(auth_server_url))
+            end
             @info "Connect token requested" game_state.frame_number
+        end
+
+        if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+            connect_token_request_response = frame_debug_info_load.connect_token_request_response
         end
 
         # process connect token when received
         if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && !isnothing(connect_token_request_response)
             @info "Connect token received" game_state.frame_number
+
+            frame_debug_info.connect_token_request_response = deepcopy(connect_token_request_response)
 
             if length(connect_token_request_response.body) != SIZE_OF_CONNECT_TOKEN_PACKET
                 client_state.state_machine_state = CLIENT_STATE_INVALID_CONNECT_TOKEN
@@ -469,7 +481,7 @@ function start_client(test_config)
         end
 
         # invalidate connect token when expired
-        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_start_time >= client_state.connect_token_packet.expire_timestamp)
+        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_start_time >= client_state.connect_token_packet.expire_timestamp * 10 ^ 9)
             @info "Connect token expired" game_state.frame_number
             client_state.connect_token_packet = nothing
             client_state.state_machine_state = CLIENT_STATE_CONNECT_TOKEN_EXPIRED
@@ -537,7 +549,7 @@ function auth_handler(request, df_user_data, protocol_id, timeout_seconds, conne
                 return HTTP.Response(400, "ERROR: Invalid credentials")
             else
                 if bytes2hex(SHA.sha3_256(hashed_password * df_user_data[i, :salt])) == df_user_data[i, :hashed_salted_hashed_password]
-                    create_timestamp = time_ns()
+                    create_timestamp = round(TYPE_OF_TIMESTAMP, time())
                     connect_token_info = ConnectTokenInfo(create_timestamp, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses, i)
 
                     connect_token_packet = ConnectTokenPacket(connect_token_info)

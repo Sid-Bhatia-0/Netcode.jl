@@ -78,7 +78,7 @@ function reset!(replay_manager::ReplayManager; replay_file_save = nothing, repla
     return nothing
 end
 
-FrameDebugInfo(game_state, app_server_state, client_state) = FrameDebugInfo(game_state, 0, 0, 0, 0, 0, [], [], app_server_state, client_state)
+FrameDebugInfo(game_state, app_server_state, client_state) = FrameDebugInfo(game_state, 0, 0, 0, 0, 0, nothing, [], [], app_server_state, client_state)
 
 function reset!(frame_debug_info::FrameDebugInfo)
     frame_debug_info.frame_time = 0
@@ -94,7 +94,7 @@ end
 
 function GameState(target_frame_rate, max_frames)
     target_ns_per_frame = 1_000_000_000 ÷ target_frame_rate
-    return GameState(0, 1, 0, target_frame_rate, target_ns_per_frame, max_frames, "", "")
+    return GameState(0, 0, 1, 0, target_frame_rate, target_ns_per_frame, max_frames, "", "")
 end
 
 function NetcodeAddress(address::Union{Sockets.InetAddr{Sockets.IPv4}, Sockets.InetAddr{Sockets.IPv6}})
@@ -129,7 +129,7 @@ end
 
 function ConnectTokenInfo(create_timestamp, protocol_id, timeout_seconds, connect_token_expire_seconds, server_side_shared_key, app_server_addresses, client_id)
     # TODO: assert conditions on inputs
-    expire_timestamp = create_timestamp + connect_token_expire_seconds * 10 ^ 9
+    expire_timestamp = create_timestamp + connect_token_expire_seconds
 
     return ConnectTokenInfo(
         NETCODE_VERSION_INFO,

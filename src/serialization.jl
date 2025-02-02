@@ -279,7 +279,7 @@ function netcode_deserialize(io::IO, ::Type{ConnectionRequestPacket}, expected_p
     end
 
     expire_timestamp = read(io, TYPE_OF_TIMESTAMP)
-    if expire_timestamp <= frame_start_time
+    if expire_timestamp * 10 ^ 9 <= frame_start_time
         return nothing
     end
 
