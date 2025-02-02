@@ -19,7 +19,7 @@ function set_frame_start_time(game_state)
     end
 end
 
-function replay_frame_start_time_maybe()
+function replay_frame_start_time_maybe(game_state)
     if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
         frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
 
@@ -27,6 +27,8 @@ function replay_frame_start_time_maybe()
 
         game_state.frame_start_time = frame_debug_info_load.game_state.frame_start_time
     end
+
+    return nothing
 end
 
 function append_frame_debug_info_to_debug_info_save(frame_debug_info)
