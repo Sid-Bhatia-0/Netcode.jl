@@ -31,7 +31,7 @@ function replay_frame_start_time_maybe!(game_state)
     return nothing
 end
 
-function append_frame_debug_info_to_debug_info_save(frame_debug_info)
+function append_frame_debug_info_to_debug_info_save(frame_debug_info, game_state)
     push!(REPLAY_MANAGER.debug_info_save.frame_debug_infos, frame_debug_info)
     @assert length(REPLAY_MANAGER.debug_info_save.frame_debug_infos) == game_state.frame_number
 
@@ -99,6 +99,7 @@ function receive_and_handle_packets!(host_state, game_state)
         sender_netcode_address, data = take!(host_state.packet_receive_channel)
         @info "Packet received:" sender_netcode_address length(data) game_state.frame_number
 
+        frame_debug_info = REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number]
         push!(frame_debug_info.packets_received, (sender_netcode_address, copy(data)))
 
         handle_packet!(host_state, sender_netcode_address, data, game_state.frame_number, game_state.frame_start_time)
@@ -496,7 +497,7 @@ function start_client(test_config)
         replay_frame_start_time_maybe!(game_state)
 
         reset!(frame_debug_info)
-        append_frame_debug_info_to_debug_info_save(frame_debug_info)
+        append_frame_debug_info_to_debug_info_save(frame_debug_info, game_state)
 
         log_periodic_progress(game_state)
 
