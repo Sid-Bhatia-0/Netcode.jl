@@ -447,13 +447,21 @@ function start_client(test_config)
 
         # request connect token
         if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && game_state.frame_number == connect_token_request_frame
-            errormonitor(@async connect_token_request_response = HTTP.get(auth_server_url))
+            if !(!isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input)
+                errormonitor(@async connect_token_request_response = HTTP.get(auth_server_url))
+            end
             @info "Connect token requested" game_state.frame_number
+        end
+
+        if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+            connect_token_request_response = frame_debug_info_load.connect_token_request_response
         end
 
         # process connect token when received
         if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && !isnothing(connect_token_request_response)
             @info "Connect token received" game_state.frame_number
+
+            frame_debug_info.connect_token_request_response = deepcopy(connect_token_request_response)
 
             if length(connect_token_request_response.body) != SIZE_OF_CONNECT_TOKEN_PACKET
                 client_state.state_machine_state = CLIENT_STATE_INVALID_CONNECT_TOKEN
