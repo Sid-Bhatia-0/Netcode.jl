@@ -68,6 +68,24 @@ function replay_clean_input_string_maybe(game_state)
     return nothing
 end
 
+function replay_packet_receive_channel_maybe(host_state)
+    if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+        frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+
+        @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
+
+        while !isempty(host_state.packet_receive_channel)
+            take!(host_state.packet_receive_channel)
+        end
+
+        for (netcode_address, data) in frame_debug_info_load.packets_received
+            put!(host_state.packet_receive_channel, (netcode_address, copy(data)))
+        end
+    end
+
+    return nothing
+end
+
 function handle_packet!(app_server_state::AppServerState, client_netcode_address, data, frame_number, frame_start_time)
     packet_size = length(data)
 
@@ -459,19 +477,7 @@ function start_client(test_config)
         set_clean_input_string(game_state)
         replay_clean_input_string_maybe(game_state)
 
-        if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
-            frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
-
-            @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
-
-            while !isempty(client_state.packet_receive_channel)
-                take!(client_state.packet_receive_channel)
-            end
-
-            for (netcode_address, data) in frame_debug_info_load.packets_received
-                put!(client_state.packet_receive_channel, (netcode_address, copy(data)))
-            end
-        end
+        replay_packet_receive_channel_maybe(client_state)
 
         if game_state.frame_number > 1
             REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
