@@ -94,6 +94,19 @@ function set_previous_frame_time(game_state)
     return nothing
 end
 
+function receive_and_handle_packets!(host_state, game_state)
+    while !isempty(host_state.packet_receive_channel)
+        sender_netcode_address, data = take!(host_state.packet_receive_channel)
+        @info "Packet received:" sender_netcode_address length(data) game_state.frame_number
+
+        push!(frame_debug_info.packets_received, (sender_netcode_address, copy(data)))
+
+        handle_packet!(host_state, sender_netcode_address, data, game_state.frame_number, game_state.frame_start_time)
+    end
+
+    return nothing
+end
+
 function handle_packet!(app_server_state::AppServerState, client_netcode_address, data, frame_number, frame_start_time)
     packet_size = length(data)
 
@@ -489,14 +502,7 @@ function start_client(test_config)
 
         set_previous_frame_time(game_state)
 
-        while !isempty(client_state.packet_receive_channel)
-            server_netcode_address, data = take!(client_state.packet_receive_channel)
-            @info "Packet received:" server_netcode_address length(data) game_state.frame_number
-
-            push!(frame_debug_info.packets_received, (server_netcode_address, copy(data)))
-
-            handle_packet!(client_state, server_netcode_address, data, game_state.frame_number, game_state.frame_start_time)
-        end
+        receive_and_handle_packets!(client_state, game_state)
 
         # request connect token
         if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && game_state.frame_number == connect_token_request_frame
