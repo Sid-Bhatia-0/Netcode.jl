@@ -56,6 +56,18 @@ function log_periodic_progress(game_state)
     return nothing
 end
 
+function replay_clean_input_string_maybe(game_state)
+    if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+        frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+
+        @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
+
+        game_state.clean_input_string = frame_debug_info_load.game_state.clean_input_string
+    end
+
+    return nothing
+end
+
 function handle_packet!(app_server_state::AppServerState, client_netcode_address, data, frame_number, frame_start_time)
     packet_size = length(data)
 
@@ -445,13 +457,12 @@ function start_client(test_config)
         end
 
         set_clean_input_string(game_state)
+        replay_clean_input_string_maybe(game_state)
 
         if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
             frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
 
             @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
-
-            game_state.clean_input_string = frame_debug_info_load.game_state.clean_input_string
 
             while !isempty(client_state.packet_receive_channel)
                 take!(client_state.packet_receive_channel)
@@ -460,8 +471,6 @@ function start_client(test_config)
             for (netcode_address, data) in frame_debug_info_load.packets_received
                 put!(client_state.packet_receive_channel, (netcode_address, copy(data)))
             end
-        else
-            game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
         end
 
         if game_state.frame_number > 1
