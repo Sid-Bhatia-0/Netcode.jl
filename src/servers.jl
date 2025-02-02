@@ -38,6 +38,16 @@ function append_frame_debug_info_to_debug_info_save(frame_debug_info)
     return nothing
 end
 
+function set_raw_input_string(game_state)
+    game_state.raw_input_string = get_raw_input_string()
+    return nothing
+end
+
+function set_clean_input_string(game_state)
+    game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
+    return nothing
+end
+
 function log_periodic_progress(game_state)
     if mod1(game_state.frame_number, game_state.target_frame_rate) == game_state.target_frame_rate
         @info "Progress" game_state.frame_number
@@ -426,13 +436,15 @@ function start_client(test_config)
 
         log_periodic_progress(game_state)
 
-        game_state.raw_input_string = get_raw_input_string()
+        set_raw_input_string(game_state)
 
         if game_state.raw_input_string == "p"
             Debugger.@bp
         elseif game_state.raw_input_string == "q"
             break
         end
+
+        set_clean_input_string(game_state)
 
         if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
             frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
