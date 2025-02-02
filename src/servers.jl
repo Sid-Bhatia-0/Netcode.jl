@@ -9,6 +9,16 @@ function setup_packet_receive_channel_task(channel, socket)
     return task
 end
 
+function set_frame_start_time(game_state)
+    if game_state.frame_number == 1
+        game_state.game_start_time = round(TYPE_OF_TIMESTAMP, time() * 10 ^ 9)
+        game_state.reference_time_ns = time_ns()
+        game_state.frame_start_time = game_state.game_start_time
+    else
+        game_state.frame_start_time = game_state.game_start_time + get_time_since_reference_time_ns(game_state.reference_time_ns)
+    end
+end
+
 function handle_packet!(app_server_state::AppServerState, client_netcode_address, data, frame_number, frame_start_time)
     packet_size = length(data)
 
@@ -381,13 +391,7 @@ function start_client(test_config)
     connect_token_request_response = nothing
 
     while true
-        if game_state.frame_number == 1
-            game_state.game_start_time = round(TYPE_OF_TIMESTAMP, time() * 10 ^ 9)
-            game_state.reference_time_ns = time_ns()
-            game_state.frame_start_time = game_state.game_start_time
-        else
-            game_state.frame_start_time = game_state.game_start_time + get_time_since_reference_time_ns(game_state.reference_time_ns)
-        end
+        set_frame_start_time(game_state)
 
         if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
             frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
