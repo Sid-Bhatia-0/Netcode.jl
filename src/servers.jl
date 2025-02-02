@@ -19,6 +19,16 @@ function set_frame_start_time(game_state)
     end
 end
 
+function replay_frame_start_time_maybe()
+    if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+        frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+
+        @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
+
+        game_state.frame_start_time = frame_debug_info_load.game_state.frame_start_time
+    end
+end
+
 function handle_packet!(app_server_state::AppServerState, client_netcode_address, data, frame_number, frame_start_time)
     packet_size = length(data)
 
@@ -392,14 +402,7 @@ function start_client(test_config)
 
     while true
         set_frame_start_time(game_state)
-
-        if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
-            frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
-
-            @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
-
-            game_state.frame_start_time = frame_debug_info_load.game_state.frame_start_time
-        end
+        replay_frame_start_time_maybe(game_state)
 
         reset!(frame_debug_info)
 
