@@ -78,7 +78,7 @@ function reset!(replay_manager::ReplayManager; replay_file_save = nothing, repla
     return nothing
 end
 
-FrameDebugInfo(game_state, app_server_state, client_state) = FrameDebugInfo(game_state, 0, 0, 0, 0, 0, [], [], app_server_state, client_state)
+FrameDebugInfo(game_state, app_server_state, client_state) = FrameDebugInfo(game_state, 0, 0, 0, 0, 0, nothing, [], [], app_server_state, client_state)
 
 function reset!(frame_debug_info::FrameDebugInfo)
     frame_debug_info.frame_time = 0

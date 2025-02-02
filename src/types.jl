@@ -73,6 +73,7 @@ mutable struct FrameDebugInfo
     update_time_observed::Int
     sleep_time_theoretical::Int
     sleep_time_observed::Int
+    connect_token_request_response::Any
     packets_received::Vector{Any}
     packets_sent::Vector{Any}
     app_server_state::Any
