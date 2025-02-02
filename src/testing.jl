@@ -85,11 +85,17 @@ function TestConfig()
 end
 
 function test_app_server()
-    Logging.global_logger(Netcode.create_logger("app_server", [Main, Netcode]))
+    test_config = TestConfig()
+
+    if isnothing(test_config.replay_file_load_server)
+        x = "app_server"
+    else
+        x = "app_server_replay_run"
+    end
+
+    Logging.global_logger(Netcode.create_logger(x, [Main, Netcode]))
 
     @info "Running as app_server"
-
-    test_config = TestConfig()
 
     return start_app_server(test_config)
 end
@@ -105,11 +111,15 @@ function test_auth_server()
 end
 
 function test_client()
-    Logging.global_logger(Netcode.create_logger("client", [Main, Netcode]))
-
-    @info "Running as client"
-
     test_config = TestConfig()
+
+    if isnothing(test_config.replay_file_load_client)
+        x = "client"
+    else
+        x = "client_replay_run"
+    end
+
+    Logging.global_logger(Netcode.create_logger(x, [Main, Netcode]))
 
     return start_client(test_config)
 end
