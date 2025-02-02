@@ -68,7 +68,7 @@ function replay_clean_input_string_maybe!(game_state)
     return nothing
 end
 
-function replay_packet_receive_channel_maybe!(host_state)
+function replay_packet_receive_channel_maybe!(host_state, game_state)
     if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
         frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
 
@@ -331,32 +331,15 @@ function start_app_server(test_config)
     )
 
     while true
-        if game_state.frame_number == 1
-            game_state.game_start_time = round(TYPE_OF_TIMESTAMP, time() * 10 ^ 9)
-            game_state.reference_time_ns = time_ns()
-            game_state.frame_start_time = game_state.game_start_time
-        else
-            game_state.frame_start_time = game_state.game_start_time + get_time_since_reference_time_ns(game_state.reference_time_ns)
-        end
-
-        if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
-            frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
-
-            @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
-
-            game_state.frame_start_time = frame_debug_info_load.game_state.frame_start_time
-        end
+        set_frame_start_time!(game_state)
+        replay_frame_start_time_maybe!(game_state)
 
         reset!(frame_debug_info)
+        append_frame_debug_info_to_debug_info_save(frame_debug_info, game_state)
 
-        push!(REPLAY_MANAGER.debug_info_save.frame_debug_infos, frame_debug_info)
-        @assert length(REPLAY_MANAGER.debug_info_save.frame_debug_infos) == game_state.frame_number
+        log_periodic_progress(game_state)
 
-        if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
-            @info "Progress" game_state.frame_number
-        end
-
-        game_state.raw_input_string = get_raw_input_string()
+        set_raw_input_string!(game_state)
 
         if game_state.raw_input_string == "p"
             Debugger.@bp
@@ -364,39 +347,17 @@ function start_app_server(test_config)
             break
         end
 
-        if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
-            frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+        set_clean_input_string!(game_state)
+        replay_clean_input_string_maybe!(game_state)
 
-            @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
+        replay_packet_receive_channel_maybe!(app_server_state, game_state)
 
-            game_state.clean_input_string = frame_debug_info_load.game_state.clean_input_string
-
-            while !isempty(app_server_state.packet_receive_channel)
-                take!(app_server_state.packet_receive_channel)
-            end
-
-            for (netcode_address, data) in frame_debug_info_load.packets_received
-                put!(app_server_state.packet_receive_channel, (netcode_address, copy(data)))
-            end
-        else
-            game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
-        end
-
-        if game_state.frame_number > 1
-            REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
-        end
+        set_previous_frame_time(game_state)
 
         num_cleaned_up_waiting_room = clean_up!(app_server_state.waiting_room, game_state.frame_number, game_state.target_frame_rate)
         app_server_state.num_occupied_waiting_room -= num_cleaned_up_waiting_room
 
-        while !isempty(app_server_state.packet_receive_channel)
-            client_netcode_address, data = take!(app_server_state.packet_receive_channel)
-            @info "Packet received:" client_netcode_address length(data) game_state.frame_number
-
-            push!(frame_debug_info.packets_received, (client_netcode_address, copy(data)))
-
-            handle_packet!(app_server_state, client_netcode_address, data, game_state.frame_number, game_state.frame_start_time)
-        end
+        receive_and_handle_packets!(app_server_state, game_state)
 
         for (i, waiting_client_slot) in enumerate(app_server_state.waiting_room)
             if waiting_client_slot.is_used
@@ -448,12 +409,10 @@ function start_app_server(test_config)
             break
         end
 
-        game_state.frame_number = game_state.frame_number + 1
+        increment_frame_number!(game_state)
     end
 
-    if !isnothing(REPLAY_MANAGER.io_replay_file_save)
-        close(REPLAY_MANAGER.io_replay_file_save)
-    end
+    close_io_replay_file_save_maybe()
 
     summarize_debug_info(REPLAY_MANAGER.debug_info_save)
 
@@ -512,7 +471,7 @@ function start_client(test_config)
         set_clean_input_string!(game_state)
         replay_clean_input_string_maybe!(game_state)
 
-        replay_packet_receive_channel_maybe!(client_state)
+        replay_packet_receive_channel_maybe!(client_state, game_state)
 
         set_previous_frame_time(game_state)
 
@@ -527,6 +486,10 @@ function start_client(test_config)
         end
 
         if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+            frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+
+            @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
+
             connect_token_request_response = frame_debug_info_load.connect_token_request_response
         end
 
