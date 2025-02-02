@@ -29,6 +29,21 @@ function replay_frame_start_time_maybe()
     end
 end
 
+function append_frame_debug_info_to_debug_info_save(frame_debug_info)
+    push!(REPLAY_MANAGER.debug_info_save.frame_debug_infos, frame_debug_info)
+    @assert length(REPLAY_MANAGER.debug_info_save.frame_debug_infos) == game_state.frame_number
+
+    return nothing
+end
+
+function log_periodic_progress(game_state)
+    if mod1(game_state.frame_number, game_state.target_frame_rate) == game_state.target_frame_rate
+        @info "Progress" game_state.frame_number
+    end
+
+    return nothing
+end
+
 function handle_packet!(app_server_state::AppServerState, client_netcode_address, data, frame_number, frame_start_time)
     packet_size = length(data)
 
@@ -405,13 +420,9 @@ function start_client(test_config)
         replay_frame_start_time_maybe(game_state)
 
         reset!(frame_debug_info)
+        append_frame_debug_info_to_debug_info_save(frame_debug_info)
 
-        push!(REPLAY_MANAGER.debug_info_save.frame_debug_infos, frame_debug_info)
-        @assert length(REPLAY_MANAGER.debug_info_save.frame_debug_infos) == game_state.frame_number
-
-        if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
-            @info "Progress" game_state.frame_number
-        end
+        log_periodic_progress(game_state)
 
         game_state.raw_input_string = get_raw_input_string()
 
