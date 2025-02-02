@@ -52,6 +52,18 @@ function TestConfig()
     replay_file_load_server = nothing
     frame_number_load_reset_server = nothing
 
+    easy_replay_switch = true
+
+    if easy_replay_switch
+        replay_file_save_client = "client_replay_run.replay"
+        replay_file_load_client = "client.replay"
+        frame_number_load_reset_client = nothing
+
+        replay_file_save_server = "server_replay_run.replay"
+        replay_file_load_server = "server.replay"
+        frame_number_load_reset_server = nothing
+    end
+
     return TestConfig(
         protocol_id,
         rng,
