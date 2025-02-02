@@ -86,6 +86,14 @@ function replay_packet_receive_channel_maybe(host_state)
     return nothing
 end
 
+function set_previous_frame_time(game_state)
+    if game_state.frame_number > 1
+        REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
+    end
+
+    return nothing
+end
+
 function handle_packet!(app_server_state::AppServerState, client_netcode_address, data, frame_number, frame_start_time)
     packet_size = length(data)
 
@@ -479,9 +487,7 @@ function start_client(test_config)
 
         replay_packet_receive_channel_maybe(client_state)
 
-        if game_state.frame_number > 1
-            REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
-        end
+        set_previous_frame_time(game_state)
 
         while !isempty(client_state.packet_receive_channel)
             server_netcode_address, data = take!(client_state.packet_receive_channel)
