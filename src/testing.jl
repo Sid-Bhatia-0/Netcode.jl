@@ -52,7 +52,7 @@ function TestConfig()
     replay_file_load_server = nothing
     frame_number_load_reset_server = nothing
 
-    easy_replay_switch = false
+    easy_replay_switch = true
 
     if easy_replay_switch
         replay_file_save_client = "client_replay_run.replay"

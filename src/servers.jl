@@ -134,6 +134,57 @@ function close_io_replay_file_save_maybe()
     return nothing
 end
 
+function get_frame_debug_info()
+    frame_debug_info = REPLAY_MANAGER.debug_info_save.frame_debug_infos[end]
+
+    @assert length(REPLAY_MANAGER.debug_info_save.frame_debug_infos) == frame_debug_info.game_state.frame_number
+
+    return frame_debug_info
+end
+
+function send_challenges(app_server_state, game_state)
+    frame_debug_info = get_frame_debug_info()
+
+    for (i, waiting_client_slot) in enumerate(app_server_state.waiting_room)
+        if waiting_client_slot.is_used
+            if game_state.frame_number - waiting_client_slot.last_challenge_sent_frame > (app_server_state.challenge_delay * game_state.target_frame_rate) ÷ 10 ^ 9
+                challenge_token_info = ChallengeTokenInfo(app_server_state.challenge_token_sequence_number, waiting_client_slot.client_id, waiting_client_slot.user_data, app_server_state.challenge_token_key)
+                app_server_state.challenge_token_sequence_number += 1
+
+                encrypted_challenge_token_data = encrypt(challenge_token_info)
+                challenge_packet_info = ChallengePacketInfo(challenge_token_info.challenge_token_sequence_number, encrypted_challenge_token_data)
+                challenge_packet_content = get_netcode_serialized_data(challenge_packet_info)
+
+                connection_packet_info = ConnectionPacketInfo(app_server_state.protocol_id, PACKET_TYPE_CONNECTION_CHALLENGE_PACKET, app_server_state.packet_sequence_number, challenge_packet_content, waiting_client_slot.server_to_client_key)
+
+                encrypted_packet_data = encrypt(connection_packet_info)
+
+                packet_prefix = generate_packet_prefix(PACKET_TYPE_CONNECTION_CHALLENGE_PACKET, app_server_state.packet_sequence_number)
+
+                connection_packet = ConnectionPacket(packet_prefix, CompactUnsignedInteger(app_server_state.packet_sequence_number), encrypted_packet_data)
+
+                data = get_netcode_serialized_data(connection_packet)
+
+                inet_address = get_inetaddr(waiting_client_slot.netcode_address)
+                Sockets.send(app_server_state.socket, inet_address.host, inet_address.port, data)
+
+                packet_size = length(data)
+                packet_prefix = get_packet_prefix(data)
+                packet_type = get_packet_type(packet_prefix)
+                packet_sequence_number = app_server_state.packet_sequence_number
+                @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type packet_sequence_number
+                push!(frame_debug_info.packets_sent, (inet_address, copy(data)))
+
+                app_server_state.packet_sequence_number += 1
+
+                app_server_state.waiting_room[i] = Accessors.@set waiting_client_slot.last_challenge_sent_frame = game_state.frame_number
+            end
+        end
+    end
+
+    return nothing
+end
+
 function handle_packet!(app_server_state::AppServerState, client_netcode_address, data, frame_number, frame_start_time)
     packet_size = length(data)
 
@@ -323,7 +374,7 @@ function start_app_server(test_config)
     challenge_delay = test_config.challenge_delay
     challenge_token_key = test_config.challenge_token_key
 
-    app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, room_size, waiting_room_size, used_connect_token_history_size)
+    app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, room_size, waiting_room_size, used_connect_token_history_size, challenge_delay, challenge_token_key)
     client_state = nothing
 
     @info "Server started listening"
@@ -371,42 +422,7 @@ function start_app_server(test_config)
 
         receive_and_handle_packets!(app_server_state, game_state)
 
-        for (i, waiting_client_slot) in enumerate(app_server_state.waiting_room)
-            if waiting_client_slot.is_used
-                if game_state.frame_number - waiting_client_slot.last_challenge_sent_frame > (challenge_delay * game_state.target_frame_rate) ÷ 10 ^ 9
-                    challenge_token_info = ChallengeTokenInfo(app_server_state.challenge_token_sequence_number, waiting_client_slot.client_id, waiting_client_slot.user_data, challenge_token_key)
-                    app_server_state.challenge_token_sequence_number += 1
-
-                    encrypted_challenge_token_data = encrypt(challenge_token_info)
-                    challenge_packet_info = ChallengePacketInfo(challenge_token_info.challenge_token_sequence_number, encrypted_challenge_token_data)
-                    challenge_packet_content = get_netcode_serialized_data(challenge_packet_info)
-
-                    connection_packet_info = ConnectionPacketInfo(app_server_state.protocol_id, PACKET_TYPE_CONNECTION_CHALLENGE_PACKET, app_server_state.packet_sequence_number, challenge_packet_content, waiting_client_slot.server_to_client_key)
-
-                    encrypted_packet_data = encrypt(connection_packet_info)
-
-                    packet_prefix = generate_packet_prefix(PACKET_TYPE_CONNECTION_CHALLENGE_PACKET, app_server_state.packet_sequence_number)
-
-                    connection_packet = ConnectionPacket(packet_prefix, CompactUnsignedInteger(app_server_state.packet_sequence_number), encrypted_packet_data)
-
-                    data = get_netcode_serialized_data(connection_packet)
-
-                    inet_address = get_inetaddr(waiting_client_slot.netcode_address)
-                    Sockets.send(app_server_state.socket, inet_address.host, inet_address.port, data)
-
-                    packet_size = length(data)
-                    packet_prefix = get_packet_prefix(data)
-                    packet_type = get_packet_type(packet_prefix)
-                    packet_sequence_number = app_server_state.packet_sequence_number
-                    @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type packet_sequence_number
-                    push!(frame_debug_info.packets_sent, (inet_address, copy(data)))
-
-                    app_server_state.packet_sequence_number += 1
-
-                    app_server_state.waiting_room[i] = Accessors.@set waiting_client_slot.last_challenge_sent_frame = game_state.frame_number
-                end
-            end
-        end
+        send_challenges(app_server_state, game_state)
 
         simulate_update!(game_state)
 

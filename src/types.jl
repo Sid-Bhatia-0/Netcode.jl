@@ -263,6 +263,8 @@ mutable struct AppServerState
     used_connect_token_history::Vector{ConnectTokenSlot}
     packet_sequence_number::TYPE_OF_MAX_SEQUENCE_NUMBER
     challenge_token_sequence_number::TYPE_OF_CHALLENGE_TOKEN_SEQUENCE_NUMBER
+    challenge_delay::Int
+    challenge_token_key::Vector{UInt8}
 end
 
 mutable struct ClientState
