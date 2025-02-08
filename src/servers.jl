@@ -244,6 +244,32 @@ function expire_connect_token_maybe!(client_state, game_state)
     return nothing
 end
 
+function send_connection_request_packet_maybe!(client_state, game_state)
+    if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_number - client_state.last_connection_request_packet_sent_frame > (client_state.connection_request_packet_wait_time * game_state.target_frame_rate) ÷ 10 ^ 9)
+        connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet) # in the state CLIENT_STATE_SENDING_CONNECTION_REQUEST, client_state.connect_token_packet will never be nothing (otherwise something is wrong and the code better crash)
+
+        data = get_netcode_serialized_data(connection_request_packet)
+
+        app_server_netcode_address = first(client_state.connect_token_packet.netcode_addresses)
+
+        app_server_inet_address = get_inetaddr(app_server_netcode_address)
+        if !(!isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input)
+            Sockets.send(client_state.socket, app_server_inet_address.host, app_server_inet_address.port, data)
+        end
+
+        packet_size = length(data)
+        packet_prefix = get_packet_prefix(data)
+        packet_type = get_packet_type(packet_prefix)
+        @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type
+        frame_debug_info = REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number]
+        push!(frame_debug_info.packets_sent, (app_server_inet_address, copy(data)))
+
+        client_state.last_connection_request_packet_sent_frame = game_state.frame_number
+    end
+
+    return nothing
+end
+
 function handle_packet!(app_server_state::AppServerState, client_netcode_address, data, frame_number, frame_start_time)
     packet_size = length(data)
 
@@ -520,7 +546,7 @@ function start_client(test_config)
     hashed_password = bytes2hex(SHA.sha3_256(password))
     auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)
 
-    client_state = ClientState(protocol_id, packet_receive_channel_size, auth_server_url, connect_token_request_frame)
+    client_state = ClientState(protocol_id, packet_receive_channel_size, auth_server_url, connect_token_request_frame, connection_request_packet_wait_time)
     app_server_state = nothing
 
     setup_packet_receive_channel_task(client_state.packet_receive_channel, client_state.socket)
@@ -568,25 +594,7 @@ function start_client(test_config)
 
         expire_connect_token_maybe!(client_state, game_state)
 
-        # send connection request packet when possible
-        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_number - client_state.last_connection_request_packet_sent_frame > (connection_request_packet_wait_time * game_state.target_frame_rate) ÷ 10 ^ 9) # in the state CLIENT_STATE_SENDING_CONNECTION_REQUEST, client_state.connect_token_packet will never be nothing (otherwise something is wrong and the code better crash)
-            connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet)
-
-            data = get_netcode_serialized_data(connection_request_packet)
-
-            app_server_netcode_address = first(client_state.connect_token_packet.netcode_addresses)
-
-            app_server_inet_address = get_inetaddr(app_server_netcode_address)
-            Sockets.send(client_state.socket, app_server_inet_address.host, app_server_inet_address.port, data)
-
-            packet_size = length(data)
-            packet_prefix = get_packet_prefix(data)
-            packet_type = get_packet_type(packet_prefix)
-            @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type
-            push!(frame_debug_info.packets_sent, (app_server_inet_address, copy(data)))
-
-            client_state.last_connection_request_packet_sent_frame = game_state.frame_number
-        end
+        send_connection_request_packet_maybe!(client_state, game_state)
 
         simulate_update!(game_state)
 

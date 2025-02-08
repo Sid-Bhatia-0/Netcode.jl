@@ -276,5 +276,6 @@ mutable struct ClientState
     connect_token_request_frame::Int
     connect_token_request_response::Any
     connect_token_packet::Union{Nothing, ConnectTokenPacket}
+    connection_request_packet_wait_time::Int
     last_connection_request_packet_sent_frame::Int
 end
