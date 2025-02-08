@@ -185,6 +185,65 @@ function send_challenges(app_server_state, game_state)
     return nothing
 end
 
+function request_connect_token_maybe!(client_state, game_state)
+    if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && game_state.frame_number == client_state.connect_token_request_frame
+        if !(!isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input)
+            errormonitor(@async client_state.connect_token_request_response = HTTP.get(client_state.auth_server_url))
+        end
+        @info "Connect token requested" game_state.frame_number
+    end
+
+    return nothing
+end
+
+function receive_and_process_connect_token_maybe!(client_state, game_state)
+    if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+        frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+
+        @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
+
+        client_state.connect_token_request_response = frame_debug_info_load.connect_token_request_response
+    end
+
+    # process connect token if received
+    if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && !isnothing(client_state.connect_token_request_response)
+        @info "Connect token received" game_state.frame_number
+
+        frame_debug_info = REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number]
+
+        frame_debug_info.connect_token_request_response = deepcopy(client_state.connect_token_request_response)
+
+        if length(client_state.connect_token_request_response.body) != SIZE_OF_CONNECT_TOKEN_PACKET
+            client_state.state_machine_state = CLIENT_STATE_INVALID_CONNECT_TOKEN
+            error("Connect token invalid: unexpected `packet_size`")
+        end
+
+        connect_token_packet = netcode_deserialize(IOBuffer(client_state.connect_token_request_response.body), ConnectTokenPacket, client_state.protocol_id)
+        if isnothing(connect_token_packet)
+            client_state.state_machine_state = CLIENT_STATE_INVALID_CONNECT_TOKEN
+            error("Connect token invalid: `netcode_deserialize` returned `nothing`")
+        else
+            client_state.connect_token_packet = connect_token_packet
+            client_state.state_machine_state = CLIENT_STATE_SENDING_CONNECTION_REQUEST
+            client_state.connect_token_request_response = nothing
+
+            @info "Connect token validated" game_state.frame_number
+        end
+    end
+
+    return nothing
+end
+
+function expire_connect_token_maybe!(client_state, game_state)
+    if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_start_time >= client_state.connect_token_packet.expire_timestamp * 10 ^ 9) # in the state CLIENT_STATE_SENDING_CONNECTION_REQUEST, client_state.connect_token_packet will never be nothing (otherwise something is wrong and the code better crash)
+        @info "Connect token expired" game_state.frame_number
+        client_state.connect_token_packet = nothing
+        client_state.state_machine_state = CLIENT_STATE_CONNECT_TOKEN_EXPIRED
+    end
+
+    return nothing
+end
+
 function handle_packet!(app_server_state::AppServerState, client_netcode_address, data, frame_number, frame_start_time)
     packet_size = length(data)
 
@@ -461,7 +520,7 @@ function start_client(test_config)
     hashed_password = bytes2hex(SHA.sha3_256(password))
     auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)
 
-    client_state = ClientState(protocol_id, packet_receive_channel_size)
+    client_state = ClientState(protocol_id, packet_receive_channel_size, auth_server_url, connect_token_request_frame)
     app_server_state = nothing
 
     setup_packet_receive_channel_task(client_state.packet_receive_channel, client_state.socket)
@@ -476,8 +535,6 @@ function start_client(test_config)
         replay_file_load = test_config.replay_file_load_client,
         frame_number_load_reset = test_config.frame_number_load_reset_client,
     )
-
-    connect_token_request_response = nothing
 
     while true
         set_frame_start_time!(game_state)
@@ -505,54 +562,14 @@ function start_client(test_config)
 
         receive_and_handle_packets!(client_state, game_state)
 
-        # request connect token
-        if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && game_state.frame_number == connect_token_request_frame
-            if !(!isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input)
-                errormonitor(@async connect_token_request_response = HTTP.get(auth_server_url))
-            end
-            @info "Connect token requested" game_state.frame_number
-        end
+        request_connect_token_maybe!(client_state, game_state)
 
-        if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
-            frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+        receive_and_process_connect_token_maybe!(client_state, game_state)
 
-            @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
-
-            connect_token_request_response = frame_debug_info_load.connect_token_request_response
-        end
-
-        # process connect token when received
-        if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && !isnothing(connect_token_request_response)
-            @info "Connect token received" game_state.frame_number
-
-            frame_debug_info.connect_token_request_response = deepcopy(connect_token_request_response)
-
-            if length(connect_token_request_response.body) != SIZE_OF_CONNECT_TOKEN_PACKET
-                client_state.state_machine_state = CLIENT_STATE_INVALID_CONNECT_TOKEN
-                error("Connect token invalid: unexpected `packet_size`")
-            end
-
-            connect_token_packet = netcode_deserialize(IOBuffer(connect_token_request_response.body), ConnectTokenPacket, protocol_id)
-            if isnothing(connect_token_packet)
-                client_state.state_machine_state = CLIENT_STATE_INVALID_CONNECT_TOKEN
-                error("Connect token invalid: `netcode_deserialize` returned `nothing`")
-            else
-                client_state.connect_token_packet = connect_token_packet
-                client_state.state_machine_state = CLIENT_STATE_SENDING_CONNECTION_REQUEST
-            end
-
-            @info "Connect token validated" game_state.frame_number
-        end
-
-        # invalidate connect token when expired
-        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_start_time >= client_state.connect_token_packet.expire_timestamp * 10 ^ 9)
-            @info "Connect token expired" game_state.frame_number
-            client_state.connect_token_packet = nothing
-            client_state.state_machine_state = CLIENT_STATE_CONNECT_TOKEN_EXPIRED
-        end
+        expire_connect_token_maybe!(client_state, game_state)
 
         # send connection request packet when possible
-        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_number - client_state.last_connection_request_packet_sent_frame > (connection_request_packet_wait_time * game_state.target_frame_rate) ÷ 10 ^ 9)
+        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_number - client_state.last_connection_request_packet_sent_frame > (connection_request_packet_wait_time * game_state.target_frame_rate) ÷ 10 ^ 9) # in the state CLIENT_STATE_SENDING_CONNECTION_REQUEST, client_state.connect_token_packet will never be nothing (otherwise something is wrong and the code better crash)
             connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet)
 
             data = get_netcode_serialized_data(connection_request_packet)

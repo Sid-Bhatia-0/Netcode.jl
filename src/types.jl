@@ -272,6 +272,9 @@ mutable struct ClientState
     socket::Sockets.UDPSocket
     packet_receive_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     state_machine_state::Int
+    auth_server_url::String
+    connect_token_request_frame::Int
+    connect_token_request_response::Any
     connect_token_packet::Union{Nothing, ConnectTokenPacket}
     last_connection_request_packet_sent_frame::Int
 end

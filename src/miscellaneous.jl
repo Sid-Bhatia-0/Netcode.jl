@@ -251,12 +251,14 @@ function AppServerState(protocol_id, key, inet_address::Union{Sockets.InetAddr{S
     )
 end
 
-function ClientState(protocol_id, packet_receive_channel_size)
+function ClientState(protocol_id, packet_receive_channel_size, auth_server_url, connect_token_request_frame)
     socket = Sockets.UDPSocket()
 
     packet_receive_channel = Channel{Tuple{NetcodeAddress, Vector{UInt8}}}(packet_receive_channel_size)
 
     state_machine_state = CLIENT_STATE_DISCONNECTED
+
+    connect_token_request_response = nothing
 
     connect_token_packet = nothing
 
@@ -267,6 +269,9 @@ function ClientState(protocol_id, packet_receive_channel_size)
         socket,
         packet_receive_channel,
         state_machine_state,
+        auth_server_url,
+        connect_token_request_frame,
+        connect_token_request_response,
         connect_token_packet,
         last_connection_request_packet_sent_frame,
     )
