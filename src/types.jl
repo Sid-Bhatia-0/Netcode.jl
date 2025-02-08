@@ -263,6 +263,8 @@ mutable struct AppServerState
     used_connect_token_history::Vector{ConnectTokenSlot}
     packet_sequence_number::TYPE_OF_MAX_SEQUENCE_NUMBER
     challenge_token_sequence_number::TYPE_OF_CHALLENGE_TOKEN_SEQUENCE_NUMBER
+    challenge_delay::Int
+    challenge_token_key::Vector{UInt8}
 end
 
 mutable struct ClientState
@@ -270,6 +272,10 @@ mutable struct ClientState
     socket::Sockets.UDPSocket
     packet_receive_channel::Channel{Tuple{NetcodeAddress, Vector{UInt8}}}
     state_machine_state::Int
+    auth_server_url::String
+    connect_token_request_frame::Int
+    connect_token_request_response::Any
     connect_token_packet::Union{Nothing, ConnectTokenPacket}
+    connection_request_packet_wait_time::Int
     last_connection_request_packet_sent_frame::Int
 end

@@ -9,6 +9,267 @@ function setup_packet_receive_channel_task(channel, socket)
     return task
 end
 
+function set_frame_start_time!(game_state)
+    if game_state.frame_number == 1
+        game_state.game_start_time = round(TYPE_OF_TIMESTAMP, time() * 10 ^ 9)
+        game_state.reference_time_ns = time_ns()
+        game_state.frame_start_time = game_state.game_start_time
+    else
+        game_state.frame_start_time = game_state.game_start_time + get_time_since_reference_time_ns(game_state.reference_time_ns)
+    end
+end
+
+function replay_frame_start_time_maybe!(game_state)
+    if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+        frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+
+        @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
+
+        game_state.frame_start_time = frame_debug_info_load.game_state.frame_start_time
+    end
+
+    return nothing
+end
+
+function append_frame_debug_info_to_debug_info_save(frame_debug_info, game_state)
+    push!(REPLAY_MANAGER.debug_info_save.frame_debug_infos, frame_debug_info)
+    @assert length(REPLAY_MANAGER.debug_info_save.frame_debug_infos) == game_state.frame_number
+
+    return nothing
+end
+
+function set_raw_input_string!(game_state)
+    game_state.raw_input_string = get_raw_input_string()
+    return nothing
+end
+
+function set_clean_input_string!(game_state)
+    game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
+    return nothing
+end
+
+function log_periodic_progress(game_state)
+    if mod1(game_state.frame_number, game_state.target_frame_rate) == game_state.target_frame_rate
+        @info "Progress" game_state.frame_number
+    end
+
+    return nothing
+end
+
+function replay_clean_input_string_maybe!(game_state)
+    if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+        frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+
+        @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
+
+        game_state.clean_input_string = frame_debug_info_load.game_state.clean_input_string
+    end
+
+    return nothing
+end
+
+function replay_packet_receive_channel_maybe!(host_state, game_state)
+    if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+        frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+
+        @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
+
+        while !isempty(host_state.packet_receive_channel)
+            take!(host_state.packet_receive_channel)
+        end
+
+        for (netcode_address, data) in frame_debug_info_load.packets_received
+            put!(host_state.packet_receive_channel, (netcode_address, copy(data)))
+        end
+    end
+
+    return nothing
+end
+
+function set_previous_frame_time(game_state)
+    if game_state.frame_number > 1
+        REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
+    end
+
+    return nothing
+end
+
+function receive_and_handle_packets!(host_state, game_state)
+    while !isempty(host_state.packet_receive_channel)
+        sender_netcode_address, data = take!(host_state.packet_receive_channel)
+        @info "Packet received:" sender_netcode_address length(data) game_state.frame_number
+
+        frame_debug_info = REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number]
+        push!(frame_debug_info.packets_received, (sender_netcode_address, copy(data)))
+
+        handle_packet!(host_state, sender_netcode_address, data, game_state.frame_number, game_state.frame_start_time)
+    end
+
+    return nothing
+end
+
+function deepcopy_frame_debug_info(game_state)
+    REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number] = deepcopy(REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number])
+
+    return nothing
+end
+
+function clean_up!(app_server_state, game_state)
+    num_cleaned_up_waiting_room = clean_up!(app_server_state.waiting_room, game_state.frame_number, game_state.target_frame_rate)
+    app_server_state.num_occupied_waiting_room -= num_cleaned_up_waiting_room
+
+    return nothing
+end
+
+function increment_frame_number!(game_state)
+    game_state.frame_number = game_state.frame_number + 1
+    return nothing
+end
+
+function close_io_replay_file_save_maybe()
+    if !isnothing(REPLAY_MANAGER.io_replay_file_save)
+        close(REPLAY_MANAGER.io_replay_file_save)
+    end
+
+    return nothing
+end
+
+function get_frame_debug_info()
+    frame_debug_info = REPLAY_MANAGER.debug_info_save.frame_debug_infos[end]
+
+    @assert length(REPLAY_MANAGER.debug_info_save.frame_debug_infos) == frame_debug_info.game_state.frame_number
+
+    return frame_debug_info
+end
+
+function send_challenges(app_server_state, game_state)
+    frame_debug_info = get_frame_debug_info()
+
+    for (i, waiting_client_slot) in enumerate(app_server_state.waiting_room)
+        if waiting_client_slot.is_used
+            if game_state.frame_number - waiting_client_slot.last_challenge_sent_frame > (app_server_state.challenge_delay * game_state.target_frame_rate) ÷ 10 ^ 9
+                challenge_token_info = ChallengeTokenInfo(app_server_state.challenge_token_sequence_number, waiting_client_slot.client_id, waiting_client_slot.user_data, app_server_state.challenge_token_key)
+                app_server_state.challenge_token_sequence_number += 1
+
+                encrypted_challenge_token_data = encrypt(challenge_token_info)
+                challenge_packet_info = ChallengePacketInfo(challenge_token_info.challenge_token_sequence_number, encrypted_challenge_token_data)
+                challenge_packet_content = get_netcode_serialized_data(challenge_packet_info)
+
+                connection_packet_info = ConnectionPacketInfo(app_server_state.protocol_id, PACKET_TYPE_CONNECTION_CHALLENGE_PACKET, app_server_state.packet_sequence_number, challenge_packet_content, waiting_client_slot.server_to_client_key)
+
+                encrypted_packet_data = encrypt(connection_packet_info)
+
+                packet_prefix = generate_packet_prefix(PACKET_TYPE_CONNECTION_CHALLENGE_PACKET, app_server_state.packet_sequence_number)
+
+                connection_packet = ConnectionPacket(packet_prefix, CompactUnsignedInteger(app_server_state.packet_sequence_number), encrypted_packet_data)
+
+                data = get_netcode_serialized_data(connection_packet)
+
+                inet_address = get_inetaddr(waiting_client_slot.netcode_address)
+                Sockets.send(app_server_state.socket, inet_address.host, inet_address.port, data)
+
+                packet_size = length(data)
+                packet_prefix = get_packet_prefix(data)
+                packet_type = get_packet_type(packet_prefix)
+                packet_sequence_number = app_server_state.packet_sequence_number
+                @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type packet_sequence_number
+                push!(frame_debug_info.packets_sent, (inet_address, copy(data)))
+
+                app_server_state.packet_sequence_number += 1
+
+                app_server_state.waiting_room[i] = Accessors.@set waiting_client_slot.last_challenge_sent_frame = game_state.frame_number
+            end
+        end
+    end
+
+    return nothing
+end
+
+function request_connect_token_maybe!(client_state, game_state)
+    if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && game_state.frame_number == client_state.connect_token_request_frame
+        if !(!isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input)
+            errormonitor(@async client_state.connect_token_request_response = HTTP.get(client_state.auth_server_url))
+        end
+        @info "Connect token requested" game_state.frame_number
+    end
+
+    return nothing
+end
+
+function receive_and_process_connect_token_maybe!(client_state, game_state)
+    if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
+        frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+
+        @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
+
+        client_state.connect_token_request_response = frame_debug_info_load.connect_token_request_response
+    end
+
+    # process connect token if received
+    if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && !isnothing(client_state.connect_token_request_response)
+        @info "Connect token received" game_state.frame_number
+
+        frame_debug_info = REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number]
+
+        frame_debug_info.connect_token_request_response = deepcopy(client_state.connect_token_request_response)
+
+        if length(client_state.connect_token_request_response.body) != SIZE_OF_CONNECT_TOKEN_PACKET
+            client_state.state_machine_state = CLIENT_STATE_INVALID_CONNECT_TOKEN
+            error("Connect token invalid: unexpected `packet_size`")
+        end
+
+        connect_token_packet = netcode_deserialize(IOBuffer(client_state.connect_token_request_response.body), ConnectTokenPacket, client_state.protocol_id)
+        if isnothing(connect_token_packet)
+            client_state.state_machine_state = CLIENT_STATE_INVALID_CONNECT_TOKEN
+            error("Connect token invalid: `netcode_deserialize` returned `nothing`")
+        else
+            client_state.connect_token_packet = connect_token_packet
+            client_state.state_machine_state = CLIENT_STATE_SENDING_CONNECTION_REQUEST
+            client_state.connect_token_request_response = nothing
+
+            @info "Connect token validated" game_state.frame_number
+        end
+    end
+
+    return nothing
+end
+
+function expire_connect_token_maybe!(client_state, game_state)
+    if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_start_time >= client_state.connect_token_packet.expire_timestamp * 10 ^ 9) # in the state CLIENT_STATE_SENDING_CONNECTION_REQUEST, client_state.connect_token_packet will never be nothing (otherwise something is wrong and the code better crash)
+        @info "Connect token expired" game_state.frame_number
+        client_state.connect_token_packet = nothing
+        client_state.state_machine_state = CLIENT_STATE_CONNECT_TOKEN_EXPIRED
+    end
+
+    return nothing
+end
+
+function send_connection_request_packet_maybe!(client_state, game_state)
+    if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_number - client_state.last_connection_request_packet_sent_frame > (client_state.connection_request_packet_wait_time * game_state.target_frame_rate) ÷ 10 ^ 9)
+        connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet) # in the state CLIENT_STATE_SENDING_CONNECTION_REQUEST, client_state.connect_token_packet will never be nothing (otherwise something is wrong and the code better crash)
+
+        data = get_netcode_serialized_data(connection_request_packet)
+
+        app_server_netcode_address = first(client_state.connect_token_packet.netcode_addresses)
+
+        app_server_inet_address = get_inetaddr(app_server_netcode_address)
+        if !(!isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input)
+            Sockets.send(client_state.socket, app_server_inet_address.host, app_server_inet_address.port, data)
+        end
+
+        packet_size = length(data)
+        packet_prefix = get_packet_prefix(data)
+        packet_type = get_packet_type(packet_prefix)
+        @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type
+        frame_debug_info = REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number]
+        push!(frame_debug_info.packets_sent, (app_server_inet_address, copy(data)))
+
+        client_state.last_connection_request_packet_sent_frame = game_state.frame_number
+    end
+
+    return nothing
+end
+
 function handle_packet!(app_server_state::AppServerState, client_netcode_address, data, frame_number, frame_start_time)
     packet_size = length(data)
 
@@ -198,7 +459,7 @@ function start_app_server(test_config)
     challenge_delay = test_config.challenge_delay
     challenge_token_key = test_config.challenge_token_key
 
-    app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, room_size, waiting_room_size, used_connect_token_history_size)
+    app_server_state = AppServerState(protocol_id, server_side_shared_key, app_server_inet_address, packet_receive_channel_size, room_size, waiting_room_size, used_connect_token_history_size, challenge_delay, challenge_token_key)
     client_state = nothing
 
     @info "Server started listening"
@@ -219,32 +480,15 @@ function start_app_server(test_config)
     )
 
     while true
-        if game_state.frame_number == 1
-            game_state.game_start_time = round(TYPE_OF_TIMESTAMP, time() * 10 ^ 9)
-            game_state.reference_time_ns = time_ns()
-            game_state.frame_start_time = game_state.game_start_time
-        else
-            game_state.frame_start_time = game_state.game_start_time + get_time_since_reference_time_ns(game_state.reference_time_ns)
-        end
-
-        if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
-            frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
-
-            @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
-
-            game_state.frame_start_time = frame_debug_info_load.game_state.frame_start_time
-        end
+        set_frame_start_time!(game_state)
+        replay_frame_start_time_maybe!(game_state)
 
         reset!(frame_debug_info)
+        append_frame_debug_info_to_debug_info_save(frame_debug_info, game_state)
 
-        push!(REPLAY_MANAGER.debug_info_save.frame_debug_infos, frame_debug_info)
-        @assert length(REPLAY_MANAGER.debug_info_save.frame_debug_infos) == game_state.frame_number
+        log_periodic_progress(game_state)
 
-        if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
-            @info "Progress" game_state.frame_number
-        end
-
-        game_state.raw_input_string = get_raw_input_string()
+        set_raw_input_string!(game_state)
 
         if game_state.raw_input_string == "p"
             Debugger.@bp
@@ -252,82 +496,24 @@ function start_app_server(test_config)
             break
         end
 
-        if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
-            frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+        set_clean_input_string!(game_state)
+        replay_clean_input_string_maybe!(game_state)
 
-            @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
+        replay_packet_receive_channel_maybe!(app_server_state, game_state)
 
-            game_state.clean_input_string = frame_debug_info_load.game_state.clean_input_string
+        set_previous_frame_time(game_state)
 
-            while !isempty(app_server_state.packet_receive_channel)
-                take!(app_server_state.packet_receive_channel)
-            end
+        clean_up!(app_server_state, game_state)
 
-            for (netcode_address, data) in frame_debug_info_load.packets_received
-                put!(app_server_state.packet_receive_channel, (netcode_address, copy(data)))
-            end
-        else
-            game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
-        end
+        receive_and_handle_packets!(app_server_state, game_state)
 
-        if game_state.frame_number > 1
-            REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
-        end
-
-        num_cleaned_up_waiting_room = clean_up!(app_server_state.waiting_room, game_state.frame_number, game_state.target_frame_rate)
-        app_server_state.num_occupied_waiting_room -= num_cleaned_up_waiting_room
-
-        while !isempty(app_server_state.packet_receive_channel)
-            client_netcode_address, data = take!(app_server_state.packet_receive_channel)
-            @info "Packet received:" client_netcode_address length(data) game_state.frame_number
-
-            push!(frame_debug_info.packets_received, (client_netcode_address, copy(data)))
-
-            handle_packet!(app_server_state, client_netcode_address, data, game_state.frame_number, game_state.frame_start_time)
-        end
-
-        for (i, waiting_client_slot) in enumerate(app_server_state.waiting_room)
-            if waiting_client_slot.is_used
-                if game_state.frame_number - waiting_client_slot.last_challenge_sent_frame > (challenge_delay * game_state.target_frame_rate) ÷ 10 ^ 9
-                    challenge_token_info = ChallengeTokenInfo(app_server_state.challenge_token_sequence_number, waiting_client_slot.client_id, waiting_client_slot.user_data, challenge_token_key)
-                    app_server_state.challenge_token_sequence_number += 1
-
-                    encrypted_challenge_token_data = encrypt(challenge_token_info)
-                    challenge_packet_info = ChallengePacketInfo(challenge_token_info.challenge_token_sequence_number, encrypted_challenge_token_data)
-                    challenge_packet_content = get_netcode_serialized_data(challenge_packet_info)
-
-                    connection_packet_info = ConnectionPacketInfo(app_server_state.protocol_id, PACKET_TYPE_CONNECTION_CHALLENGE_PACKET, app_server_state.packet_sequence_number, challenge_packet_content, waiting_client_slot.server_to_client_key)
-
-                    encrypted_packet_data = encrypt(connection_packet_info)
-
-                    packet_prefix = generate_packet_prefix(PACKET_TYPE_CONNECTION_CHALLENGE_PACKET, app_server_state.packet_sequence_number)
-
-                    connection_packet = ConnectionPacket(packet_prefix, CompactUnsignedInteger(app_server_state.packet_sequence_number), encrypted_packet_data)
-
-                    data = get_netcode_serialized_data(connection_packet)
-
-                    inet_address = get_inetaddr(waiting_client_slot.netcode_address)
-                    Sockets.send(app_server_state.socket, inet_address.host, inet_address.port, data)
-
-                    packet_size = length(data)
-                    packet_prefix = get_packet_prefix(data)
-                    packet_type = get_packet_type(packet_prefix)
-                    packet_sequence_number = app_server_state.packet_sequence_number
-                    @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type packet_sequence_number
-                    push!(frame_debug_info.packets_sent, (inet_address, copy(data)))
-
-                    app_server_state.packet_sequence_number += 1
-
-                    app_server_state.waiting_room[i] = Accessors.@set waiting_client_slot.last_challenge_sent_frame = game_state.frame_number
-                end
-            end
-        end
+        send_challenges(app_server_state, game_state)
 
         simulate_update!(game_state)
 
         sleep_to_achieve_target_frame_rate!(game_state)
 
-        REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number] = deepcopy(REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number])
+        deepcopy_frame_debug_info(game_state)
 
         save_frame_maybe!(REPLAY_MANAGER)
         load_frame_maybe!(game_state, app_server_state, client_state, REPLAY_MANAGER)
@@ -336,12 +522,10 @@ function start_app_server(test_config)
             break
         end
 
-        game_state.frame_number = game_state.frame_number + 1
+        increment_frame_number!(game_state)
     end
 
-    if !isnothing(REPLAY_MANAGER.io_replay_file_save)
-        close(REPLAY_MANAGER.io_replay_file_save)
-    end
+    close_io_replay_file_save_maybe()
 
     summarize_debug_info(REPLAY_MANAGER.debug_info_save)
 
@@ -362,7 +546,7 @@ function start_client(test_config)
     hashed_password = bytes2hex(SHA.sha3_256(password))
     auth_server_url = "http://" * username * ":" * hashed_password * "@" * string(auth_server_address.host) * ":" * string(auth_server_address.port)
 
-    client_state = ClientState(protocol_id, packet_receive_channel_size)
+    client_state = ClientState(protocol_id, packet_receive_channel_size, auth_server_url, connect_token_request_frame, connection_request_packet_wait_time)
     app_server_state = nothing
 
     setup_packet_receive_channel_task(client_state.packet_receive_channel, client_state.socket)
@@ -378,35 +562,16 @@ function start_client(test_config)
         frame_number_load_reset = test_config.frame_number_load_reset_client,
     )
 
-    connect_token_request_response = nothing
-
     while true
-        if game_state.frame_number == 1
-            game_state.game_start_time = round(TYPE_OF_TIMESTAMP, time() * 10 ^ 9)
-            game_state.reference_time_ns = time_ns()
-            game_state.frame_start_time = game_state.game_start_time
-        else
-            game_state.frame_start_time = game_state.game_start_time + get_time_since_reference_time_ns(game_state.reference_time_ns)
-        end
-
-        if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
-            frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
-
-            @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
-
-            game_state.frame_start_time = frame_debug_info_load.game_state.frame_start_time
-        end
+        set_frame_start_time!(game_state)
+        replay_frame_start_time_maybe!(game_state)
 
         reset!(frame_debug_info)
+        append_frame_debug_info_to_debug_info_save(frame_debug_info, game_state)
 
-        push!(REPLAY_MANAGER.debug_info_save.frame_debug_infos, frame_debug_info)
-        @assert length(REPLAY_MANAGER.debug_info_save.frame_debug_infos) == game_state.frame_number
+        log_periodic_progress(game_state)
 
-        if mod1(game_state.frame_number, target_frame_rate) == target_frame_rate
-            @info "Progress" game_state.frame_number
-        end
-
-        game_state.raw_input_string = get_raw_input_string()
+        set_raw_input_string!(game_state)
 
         if game_state.raw_input_string == "p"
             Debugger.@bp
@@ -414,104 +579,28 @@ function start_client(test_config)
             break
         end
 
-        if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
-            frame_debug_info_load = REPLAY_MANAGER.debug_info_load.frame_debug_infos[game_state.frame_number]
+        set_clean_input_string!(game_state)
+        replay_clean_input_string_maybe!(game_state)
 
-            @assert game_state.frame_number == frame_debug_info_load.game_state.frame_number
+        replay_packet_receive_channel_maybe!(client_state, game_state)
 
-            game_state.clean_input_string = frame_debug_info_load.game_state.clean_input_string
+        set_previous_frame_time(game_state)
 
-            while !isempty(client_state.packet_receive_channel)
-                take!(client_state.packet_receive_channel)
-            end
+        receive_and_handle_packets!(client_state, game_state)
 
-            for (netcode_address, data) in frame_debug_info_load.packets_received
-                put!(client_state.packet_receive_channel, (netcode_address, copy(data)))
-            end
-        else
-            game_state.clean_input_string = get_clean_input_string(game_state.raw_input_string)
-        end
+        request_connect_token_maybe!(client_state, game_state)
 
-        if game_state.frame_number > 1
-            REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].frame_time = game_state.frame_start_time - REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number - 1].game_state.frame_start_time
-        end
+        receive_and_process_connect_token_maybe!(client_state, game_state)
 
-        while !isempty(client_state.packet_receive_channel)
-            server_netcode_address, data = take!(client_state.packet_receive_channel)
-            @info "Packet received:" server_netcode_address length(data) game_state.frame_number
+        expire_connect_token_maybe!(client_state, game_state)
 
-            push!(frame_debug_info.packets_received, (server_netcode_address, copy(data)))
-
-            handle_packet!(client_state, server_netcode_address, data, game_state.frame_number, game_state.frame_start_time)
-        end
-
-        # request connect token
-        if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && game_state.frame_number == connect_token_request_frame
-            if !(!isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input)
-                errormonitor(@async connect_token_request_response = HTTP.get(auth_server_url))
-            end
-            @info "Connect token requested" game_state.frame_number
-        end
-
-        if !isnothing(REPLAY_MANAGER.replay_file_load) && REPLAY_MANAGER.is_replay_input
-            connect_token_request_response = frame_debug_info_load.connect_token_request_response
-        end
-
-        # process connect token when received
-        if client_state.state_machine_state == CLIENT_STATE_DISCONNECTED && !isnothing(connect_token_request_response)
-            @info "Connect token received" game_state.frame_number
-
-            frame_debug_info.connect_token_request_response = deepcopy(connect_token_request_response)
-
-            if length(connect_token_request_response.body) != SIZE_OF_CONNECT_TOKEN_PACKET
-                client_state.state_machine_state = CLIENT_STATE_INVALID_CONNECT_TOKEN
-                error("Connect token invalid: unexpected `packet_size`")
-            end
-
-            connect_token_packet = netcode_deserialize(IOBuffer(connect_token_request_response.body), ConnectTokenPacket, protocol_id)
-            if isnothing(connect_token_packet)
-                client_state.state_machine_state = CLIENT_STATE_INVALID_CONNECT_TOKEN
-                error("Connect token invalid: `netcode_deserialize` returned `nothing`")
-            else
-                client_state.connect_token_packet = connect_token_packet
-                client_state.state_machine_state = CLIENT_STATE_SENDING_CONNECTION_REQUEST
-            end
-
-            @info "Connect token validated" game_state.frame_number
-        end
-
-        # invalidate connect token when expired
-        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_start_time >= client_state.connect_token_packet.expire_timestamp * 10 ^ 9)
-            @info "Connect token expired" game_state.frame_number
-            client_state.connect_token_packet = nothing
-            client_state.state_machine_state = CLIENT_STATE_CONNECT_TOKEN_EXPIRED
-        end
-
-        # send connection request packet when possible
-        if client_state.state_machine_state == CLIENT_STATE_SENDING_CONNECTION_REQUEST && (game_state.frame_number - client_state.last_connection_request_packet_sent_frame > (connection_request_packet_wait_time * game_state.target_frame_rate) ÷ 10 ^ 9)
-            connection_request_packet = ConnectionRequestPacket(client_state.connect_token_packet)
-
-            data = get_netcode_serialized_data(connection_request_packet)
-
-            app_server_netcode_address = first(client_state.connect_token_packet.netcode_addresses)
-
-            app_server_inet_address = get_inetaddr(app_server_netcode_address)
-            Sockets.send(client_state.socket, app_server_inet_address.host, app_server_inet_address.port, data)
-
-            packet_size = length(data)
-            packet_prefix = get_packet_prefix(data)
-            packet_type = get_packet_type(packet_prefix)
-            @info "Packet sent" game_state.frame_number packet_size packet_prefix packet_type
-            push!(frame_debug_info.packets_sent, (app_server_inet_address, copy(data)))
-
-            client_state.last_connection_request_packet_sent_frame = game_state.frame_number
-        end
+        send_connection_request_packet_maybe!(client_state, game_state)
 
         simulate_update!(game_state)
 
         sleep_to_achieve_target_frame_rate!(game_state)
 
-        REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number] = deepcopy(REPLAY_MANAGER.debug_info_save.frame_debug_infos[game_state.frame_number])
+        deepcopy_frame_debug_info(game_state)
 
         save_frame_maybe!(REPLAY_MANAGER)
         load_frame_maybe!(game_state, app_server_state, client_state, REPLAY_MANAGER)
@@ -520,12 +609,10 @@ function start_client(test_config)
             break
         end
 
-        game_state.frame_number = game_state.frame_number + 1
+        increment_frame_number!(game_state)
     end
 
-    if !isnothing(REPLAY_MANAGER.io_replay_file_save)
-        close(REPLAY_MANAGER.io_replay_file_save)
-    end
+    close_io_replay_file_save_maybe()
 
     summarize_debug_info(REPLAY_MANAGER.debug_info_save)
 
